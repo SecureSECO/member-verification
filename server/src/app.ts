@@ -3,6 +3,7 @@ import logger from "morgan";
 import * as path from "path";
 
 import { errorHandler, errorNotFoundHandler } from "./middlewares/errorHandler";
+import { api } from "./routes/api";
 
 // Routes
 import { index } from "./routes/index";
@@ -18,6 +19,7 @@ app.use(logger("dev"));
 
 // app.use(express.static(path.join(__dirname, "../public")));
 app.use("/", index);
+app.use("/api", api);
 
 app.use(errorNotFoundHandler);
 app.use(errorHandler);
