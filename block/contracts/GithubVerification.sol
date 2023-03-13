@@ -36,7 +36,9 @@ contract GithubVerification {
                 block.timestamp,
             "Address already verified; cannot re-verify yet, wait half the verifyDayThreshold"
         );
+        if (verifiedTimeMap[_toVerify] != 0)
         verifiedTimeMap[_toVerify] = block.timestamp;
+        usernameMap[_usernameHash] = _toVerify;
     }
 
     /// @notice This function checks if an address is verified and if the address has been verified recently (within the set verifyDayThreshold)
