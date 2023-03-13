@@ -8,13 +8,15 @@ api.get("/", controller.index);
 
 // api.get("/verify", controller.verify);
 api.get("/isVerified", controller.isVerified);
-api.get(
+api.post(
     "/verify",
     celebrate({
-        query: {
+        body: {
             address: Joi.string()
                 .pattern(/^0x[a-fA-F0-9]{40}$/)
                 .required(),
+            signature: Joi.string().max(1000).required(),
+            nonce: Joi.string().max(100).required(),
         },
     }),
     controller.authorize,

@@ -5,6 +5,7 @@ import * as abiObj from "./GithubVerification.json";
 import fetch from "node-fetch";
 import { Octokit } from "@octokit/core";
 import { Joi } from "celebrate";
+import crypto from "crypto";
 
 const web3provider = new Web3(
     new Web3.providers.HttpProvider(
@@ -26,14 +27,18 @@ export const index = async (req: Request, res: Response): Promise<void> => {
 /**
  * Verifies a given address on the blockchain
  */
-const verify = async (address: string): Promise<any> => {
+const verify = async (address: string, id: number): Promise<any> => {
     return new Promise(async (resolve, reject) => {
         try {
+            const hash = crypto
+                .createHash("sha256")
+                .update(id + config.HASH_SECRET);
+
             const tx = {
                 from: account,
                 to: contractAddress,
                 gas: 3000000,
-                data: contract.methods.verifyAddress(address).encodeABI(),
+                data: contract.methods.verifyAddress(address, hash).encodeABI(),
             };
 
             // signTransaction is async so we need to use a promise
@@ -66,15 +71,13 @@ export const isVerified = async (
     req: Request,
     res: Response,
 ): Promise<void> => {
-    console.log(contractAddress);
+    // console.log(contractAddress);
     try {
         const { address } = req.query;
 
         const isVerified = await contract.methods
             .addressIsVerified(address)
             .call();
-
-        console.log(isVerified);
 
         res.json({
             ok: true,
@@ -91,12 +94,26 @@ export const isVerified = async (
 
 /// GITHUB OAUTH
 const REDIRECT_URI =
-    "https://48a2-145-107-72-9.eu.ngrok.io/api/github_callback";
+    "https://securesecoverification.loca.lt/api/github_callback";
 
 export const authorize = async (req: Request, res: Response): Promise<void> => {
-    const { address } = req.query;
-
     try {
+        const { address, signature, nonce } = req.body;
+
+        // Verify signature
+        const _address = web3provider.eth.accounts.recover(
+            `SecureSECO DAO Verification \nN:${nonce}`,
+            signature,
+        );
+
+        if (_address !== address) {
+            res.json({
+                ok: false,
+                message: "Invalid signature",
+            });
+            return;
+        }
+
         const url =
             `https://github.com/login/oauth/authorize` +
             `?client_id=${config.GITHUB_CLIENT_ID}` +
@@ -105,7 +122,10 @@ export const authorize = async (req: Request, res: Response): Promise<void> => {
             `&state=${address}` +
             `&allow_signup=false`;
 
-        res.redirect(url);
+        res.json({
+            ok: true,
+            url,
+        });
     } catch (error) {
         console.log(error);
         res.json({
@@ -160,10 +180,12 @@ export const githubCallback = async (
 
         const { data } = await octokit.request("GET /user");
 
-        console.log(data);
+        // console.log(data);
 
-        console.log(`Verifying ${state} on blockchain...`);
-        const receipt = await verify(state);
+        console.log(
+            `Verifying ${state} (${data.login}, ${data.id}) on blockchain...`,
+        );
+        const receipt = await verify(state, data.id);
 
         console.log(`Successfully verified ${state} on blockchain!`);
 
@@ -175,7 +197,8 @@ export const githubCallback = async (
         console.log(error);
         res.json({
             ok: false,
-            message: error,
+            message:
+                "Something went wrong, please contact the system administrators.",
         });
     }
 };

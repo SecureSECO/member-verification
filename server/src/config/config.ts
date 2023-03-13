@@ -12,6 +12,7 @@ interface ENV {
     PUBLIC_KEY: string | undefined;
     PRIVATE_KEY: string | undefined;
     CONTRACT_ADDRESS: string | undefined;
+    HASH_SECRET: string | undefined;
 }
 
 interface Config {
@@ -21,6 +22,7 @@ interface Config {
     PUBLIC_KEY: string;
     PRIVATE_KEY: string;
     CONTRACT_ADDRESS: string;
+    HASH_SECRET: string;
 }
 
 const getConfig = (): ENV => {
@@ -31,6 +33,7 @@ const getConfig = (): ENV => {
         PUBLIC_KEY: process.env.PUBLIC_KEY,
         PRIVATE_KEY: process.env.PRIVATE_KEY,
         CONTRACT_ADDRESS: process.env.CONTRACT_ADDRESS,
+        HASH_SECRET: process.env.HASH_SECRET,
     };
 };
 

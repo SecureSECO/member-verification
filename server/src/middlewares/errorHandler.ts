@@ -14,7 +14,7 @@ export const errorHandler = (
 
     // render the error page
     res.status(err.status || 500);
-    res.json({ error: err.name, message: err.message });
+    res.json({ ok: false, error: err.name, message: err.message });
 };
 
 export const errorNotFoundHandler = (

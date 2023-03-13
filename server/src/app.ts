@@ -5,10 +5,16 @@ import * as path from "path";
 import { errorHandler, errorNotFoundHandler } from "./middlewares/errorHandler";
 import { api } from "./routes/api";
 
+import cors from "cors";
+
 // Routes
 import { index } from "./routes/index";
+import { errors } from "celebrate";
 // Create Express server
 export const app = express();
+
+app.use(express.json());
+app.use(cors());
 
 // Express configuration
 app.set("port", process.env.PORT || 6969);
@@ -21,6 +27,7 @@ app.use(logger("dev"));
 app.use("/", index);
 app.use("/api", api);
 
+app.use(errors());
 app.use(errorNotFoundHandler);
 app.use(errorHandler);
 
