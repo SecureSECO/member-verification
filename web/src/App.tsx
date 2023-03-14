@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import "viem/window";
+import 'viem/window'
 import {
   Account,
   createPublicClient,
   createWalletClient,
   custom,
+  CustomTransport,
   getAccount,
   parseEther,
 } from "viem";
@@ -14,7 +15,7 @@ import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 
 const walletClient = createWalletClient({
   transport: custom(window.ethereum!),
-});
+})
 
 export const apiUrl = process.env.REACT_APP_API_URL;
 console.log(apiUrl);
