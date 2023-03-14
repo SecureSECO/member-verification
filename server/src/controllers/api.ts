@@ -24,21 +24,30 @@ export const index = async (req: Request, res: Response): Promise<void> => {
     res.redirect("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
 };
 
+type ProviderID = "github" | "kyc";
+
 /**
  * Verifies a given address on the blockchain
  */
-const verify = async (address: string, id: number): Promise<any> => {
+const verify = async (
+    address: string,
+    id: number,
+    providerId: ProviderID,
+): Promise<any> => {
     return new Promise(async (resolve, reject) => {
         try {
             const hash = crypto
                 .createHash("sha256")
-                .update(id + config.HASH_SECRET);
+                .update(id + providerId + config.HASH_SECRET)
+                .digest("hex");
 
             const tx = {
                 from: account,
                 to: contractAddress,
                 gas: 3000000,
-                data: contract.methods.verifyAddress(address, hash).encodeABI(),
+                data: contract.methods
+                    .verifyAddress(address, providerId, hash)
+                    .encodeABI(),
             };
 
             // signTransaction is async so we need to use a promise
@@ -67,27 +76,52 @@ const verify = async (address: string, id: number): Promise<any> => {
     });
 };
 
-export const isVerified = async (
-    req: Request,
-    res: Response,
-): Promise<void> => {
-    // console.log(contractAddress);
+// export const isVerified = async (
+//     req: Request,
+//     res: Response,
+// ): Promise<void> => {
+//     // console.log(contractAddress);
+//     try {
+//         const { address } = req.query;
+
+//         const isVerified = await contract.methods
+//             .addressIsVerified(address)
+//             .call();
+
+//         res.json({
+//             ok: true,
+//             isVerified,
+//         });
+//     } catch (error) {
+//         console.log(error);
+//         res.json({
+//             ok: false,
+//             message: error,
+//         });
+//     }
+// };
+
+export const getStamps = async (req: Request, res: Response): Promise<void> => {
     try {
         const { address } = req.query;
 
-        const isVerified = await contract.methods
-            .addressIsVerified(address)
-            .call();
+        const stamps = await contract.methods
+            .getStamps(address)
+            .call()
+            .then((stamps: any) => {
+                console.log(stamps);
+                return stamps;
+            });
 
         res.json({
             ok: true,
-            isVerified,
+            stamps,
         });
     } catch (error) {
         console.log(error);
         res.json({
             ok: false,
-            message: error,
+            message: error.message,
         });
     }
 };
@@ -98,7 +132,7 @@ const REDIRECT_URI =
 
 export const authorize = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { address, signature, nonce } = req.body;
+        const { address, signature, nonce, providerId } = req.body;
 
         // Verify signature
         const _address = web3provider.eth.accounts.recover(
@@ -114,13 +148,23 @@ export const authorize = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        const url =
-            `https://github.com/login/oauth/authorize` +
-            `?client_id=${config.GITHUB_CLIENT_ID}` +
-            `&scope=read:user` +
-            `&redirect_uri=${REDIRECT_URI}` +
-            `&state=${address}` +
-            `&allow_signup=false`;
+        let url = "";
+
+        switch (providerId) {
+            case "github":
+                url =
+                    `https://github.com/login/oauth/authorize` +
+                    `?client_id=${config.GITHUB_CLIENT_ID}` +
+                    `&scope=read:user` +
+                    `&redirect_uri=${REDIRECT_URI}` +
+                    `&state=${address}` +
+                    `&allow_signup=false`;
+
+                break;
+
+            default:
+                throw new Error("Invalid providerId");
+        }
 
         res.json({
             ok: true,
@@ -130,7 +174,7 @@ export const authorize = async (req: Request, res: Response): Promise<void> => {
         console.log(error);
         res.json({
             ok: false,
-            message: error,
+            message: error.message,
         });
     }
 };
@@ -185,7 +229,7 @@ export const githubCallback = async (
         console.log(
             `Verifying ${state} (${data.login}, ${data.id}) on blockchain...`,
         );
-        const receipt = await verify(state, data.id);
+        const receipt = await verify(state, data.id, "github");
 
         console.log(`Successfully verified ${state} on blockchain!`);
 
