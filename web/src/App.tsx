@@ -77,7 +77,7 @@ function App() {
   useEffect(() => {
     if (account) {
       setIsVerified(false);
-      const f = async () => {
+      const checkIfVerified = async () => {
         const res = await fetch(
           `${apiUrl}/isVerified?address=${account.address}`
         );
@@ -90,7 +90,7 @@ function App() {
         }
       };
 
-      f();
+      checkIfVerified();
     }
   }, [account]);
 
