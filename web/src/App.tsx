@@ -84,7 +84,7 @@ function App() {
   useEffect(() => {
     if (account) {
       setStamps([]);
-      const f = async () => {
+      const checkStamps = async () => {
         const res = await fetch(
           `${apiUrl}/getStamps?address=${account.address}`
         );
@@ -97,7 +97,7 @@ function App() {
         }
       };
 
-      f();
+      checkStamps();
     }
   }, [account]);
 
