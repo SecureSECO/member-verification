@@ -156,7 +156,7 @@ const StampCard = ({
         {stamp ? new Date(stamp[2] * 1000).toDateString() : "never"}
       </p>
       <button className="bg-black/80 mt-4" onClick={() => verify(providerId)}>
-        Verify
+        {verified ? "Reverify" : "Verify"}
       </button>
     </div>
   );

@@ -70,7 +70,6 @@ const verify = async (
                 reject(error);
             });
         } catch (error) {
-            console.log(error);
             reject(error);
         }
     });
@@ -224,7 +223,17 @@ export const githubCallback = async (
 
         const { data } = await octokit.request("GET /user");
 
-        // console.log(data);
+        // Should be at least 1 year old
+        const createdAt = new Date(data.created_at);
+        const now = new Date();
+        const diff = now.getTime() - createdAt.getTime();
+        const diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+
+        if (diffDays < 365) {
+            throw new Error("Account must be at least 1 year old");
+        } else {
+            console.log(`Account is ${diffDays} days old`);
+        }
 
         console.log(
             `Verifying ${state} (${data.login}, ${data.id}) on blockchain...`,
@@ -241,8 +250,7 @@ export const githubCallback = async (
         console.log(error);
         res.json({
             ok: false,
-            message:
-                "Something went wrong, please contact the system administrators.",
+            message: error.message,
         });
     }
 };
