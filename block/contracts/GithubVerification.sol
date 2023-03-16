@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import "./SignatureHelper.sol";
 
+error Unauthorized(address sender, address toVerify);
+
 /// @title A contract to verify addresses
 /// @author JSC LEE
 /// @notice You can use this contract to verify addresses
@@ -35,7 +37,7 @@ contract GithubVerification is SignatureHelper {
         uint _timestamp,
         string calldata _providerId,
         bytes calldata _proofSignature
-    ) external onlyOwner {
+    ) external {
         require(
             stampHashMap[_userHash] == address(0) ||
                 stampHashMap[_userHash] == _toVerify,
@@ -44,7 +46,7 @@ contract GithubVerification is SignatureHelper {
 
         require(_toVerify != address(0), "Address cannot be 0x0");
         require(
-            _timestamp + 1 hours < block.timestamp,
+            block.timestamp < _timestamp + 1 hours,
             "Proof expired, try verifying again"
         );
 
@@ -94,7 +96,7 @@ contract GithubVerification is SignatureHelper {
     function createStamp(
         string memory _id,
         string memory _userHash
-    ) internal onlyOwner returns (Stamp memory) {
+    ) internal returns (Stamp memory) {
         Stamp memory stamp = Stamp(_id, _userHash, block.timestamp);
         stampHashMap[_userHash] = msg.sender;
         return stamp;

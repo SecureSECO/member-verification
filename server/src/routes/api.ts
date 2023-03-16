@@ -6,20 +6,6 @@ export const api = Router();
 
 api.get("/", controller.index);
 
-// api.get("/verify", controller.verify);
-// api.get("/isVerified", controller.isVerified);
-api.get(
-    "/getStamps",
-    celebrate({
-        query: {
-            address: Joi.string()
-                .pattern(/^0x[a-fA-F0-9]{40}$/)
-                .required(),
-        },
-    }),
-    controller.getStamps,
-);
-
 api.post(
     "/verify",
     celebrate({

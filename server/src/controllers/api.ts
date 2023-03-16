@@ -7,19 +7,29 @@ import { Octokit } from "@octokit/core";
 import { Joi } from "celebrate";
 import crypto from "crypto";
 import createKeccakHash from "keccak";
+import { createPublicClient, http } from "viem";
+import { mainnet } from "viem/chains";
+
+const transport = http(
+    config.NODE_ENV === "development" ? "http://127.0.0.1:65534" : "...",
+);
+const client = createPublicClient({
+    chain: mainnet,
+    transport,
+});
 
 const web3provider = new Web3(
     new Web3.providers.HttpProvider(
-        config.NODE_ENV === "development" ? "http://localhost:65534" : "...",
+        config.NODE_ENV === "development" ? "http://127.0.0.1:65534" : "...",
     ),
 );
 
 const account = config.PUBLIC_KEY;
 const key = config.PRIVATE_KEY;
 
-const abi = abiObj.abi;
-const contractAddress = config.CONTRACT_ADDRESS;
-const contract = new web3provider.eth.Contract(abi as any, contractAddress);
+// const abi = abiObj.abi;
+// const contractAddress = config.CONTRACT_ADDRESS;
+// const contract = new web3provider.eth.Contract(abi as any, contractAddress);
 
 export const index = async (req: Request, res: Response): Promise<void> => {
     res.redirect("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
@@ -58,19 +68,30 @@ const getVerificationData = async (
 };
 
 const generateProof = (address: string, hash: string): VerificationData => {
-    const timestamp = Date.now();
-    const packed = createKeccakHash("keccak256")
-        .update(
-            web3provider.eth.abi.encodeParameters(
-                ["address", "string", "uint256"],
-                [address, hash, timestamp],
-            ),
-        )
-        .digest("hex");
+    const timestamp = Math.floor(Date.now() / 1000);
+    const hashedMessage = web3provider.utils.soliditySha3(
+        web3provider.utils.encodePacked(
+            {
+                type: "address",
+                value: address,
+            },
+            {
+                type: "string",
+                value: hash,
+            },
+            {
+                type: "uint256",
+                value: timestamp.toString(),
+            },
+        ),
+    );
 
-    const signedData = web3provider.eth.accounts.sign(packed, key);
+    const signedData = web3provider.eth.accounts.sign(hashedMessage, key);
 
     const sig = signedData.signature;
+
+    // const messageHash = signedData.messageHash;
+    // console.log(signedData);
 
     return {
         address,
@@ -80,59 +101,9 @@ const generateProof = (address: string, hash: string): VerificationData => {
     };
 };
 
-// export const isVerified = async (
-//     req: Request,
-//     res: Response,
-// ): Promise<void> => {
-//     // console.log(contractAddress);
-//     try {
-//         const { address } = req.query;
-
-//         const isVerified = await contract.methods
-//             .addressIsVerified(address)
-//             .call();
-
-//         res.json({
-//             ok: true,
-//             isVerified,
-//         });
-//     } catch (error) {
-//         console.log(error);
-//         res.json({
-//             ok: false,
-//             message: error,
-//         });
-//     }
-// };
-
-export const getStamps = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { address } = req.query;
-
-        const stamps = await contract.methods
-            .getStamps(address)
-            .call()
-            .then((stamps: any) => {
-                console.log(stamps);
-                return stamps;
-            });
-
-        res.json({
-            ok: true,
-            stamps,
-        });
-    } catch (error) {
-        console.log(error);
-        res.json({
-            ok: false,
-            message: error.message,
-        });
-    }
-};
-
 /// GITHUB OAUTH
 const REDIRECT_URI =
-    "https://securesecoverification.loca.lt/api/github_callback";
+    "https://securesecoverification2.loca.lt/api/github_callback";
 
 export const authorize = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -254,7 +225,7 @@ export const githubCallback = async (
         res.redirect(
             `${config.FRONTEND_URL}/verify?address=${state}` +
                 `&hash=${verificationData.hash}&timestamp=${verificationData.timestamp}` +
-                `&sig=${verificationData.sig}`,
+                `&sig=${verificationData.sig}&providerId=github`,
         );
     } catch (error) {
         console.log(error);

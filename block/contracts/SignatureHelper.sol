@@ -38,6 +38,14 @@ contract SignatureHelper {
         return keccak256(abi.encodePacked(_toVerify, _userHash, _timestamp));
     }
 
+    function getPackedMessage(
+        address _toVerify,
+        string memory _userHash,
+        uint _timestamp
+    ) public pure returns (bytes memory) {
+        return abi.encodePacked(_toVerify, _userHash, _timestamp);
+    }
+
     /* 3. Sign message hash
     # using browser
     account = "copy paste account of signer here"

@@ -1,6 +1,6 @@
 import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 import React from "react";
-import { Stamp } from "../App";
+import { Stamp } from "../types/Stamp";
 
 const StampCard = ({
   providerId,
