@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./SignatureHelper.sol";
+
 /// @title A contract to verify addresses
 /// @author JSC LEE
 /// @notice You can use this contract to verify addresses
-contract GithubVerification {
+contract GithubVerification is SignatureHelper {
     mapping(address => Stamp[]) internal stamps;
     mapping(string => address) internal stampHashMap;
 
@@ -26,18 +28,30 @@ contract GithubVerification {
     /// @notice This function can only be called by the owner, and it verifies an address. It's not possible to re-verofuy an address before half the verifyDayThreshold has passed.
     /// @dev Verifies an address
     /// @param _toVerify The address to verify
+    /// @param _timestamp in seconds
     function verifyAddress(
         address _toVerify,
+        string calldata _userHash,
+        uint _timestamp,
         string calldata _providerId,
-        string calldata _hash
+        bytes calldata _proofSignature
     ) external onlyOwner {
         require(
-            stampHashMap[_hash] == address(0) ||
-                stampHashMap[_hash] == _toVerify,
+            stampHashMap[_userHash] == address(0) ||
+                stampHashMap[_userHash] == _toVerify,
             "ID already affiliated with another address"
         );
 
         require(_toVerify != address(0), "Address cannot be 0x0");
+        require(
+            _timestamp + 1 hours < block.timestamp,
+            "Proof expired, try verifying again"
+        );
+
+        require(
+            verify(_owner, _toVerify, _userHash, _timestamp, _proofSignature),
+            "Proof is not valid"
+        );
 
         // Check if there is existing stamp with providerId
         bool found = false;
@@ -55,7 +69,7 @@ contract GithubVerification {
         }
 
         if (!found) {
-            stamps[_toVerify].push(createStamp(_providerId, _hash));
+            stamps[_toVerify].push(createStamp(_providerId, _userHash));
         } else {
             // Check how long it has been since the last verification
             uint timeSinceLastVerification = block.timestamp -
@@ -63,7 +77,10 @@ contract GithubVerification {
 
             // If it has been more than (verifyDayThreshold / 2) days, update the stamp
             if (timeSinceLastVerification > (verifyDayThreshold / 2) * 1 days) {
-                stamps[_toVerify][foundIndex] = createStamp(_providerId, _hash);
+                stamps[_toVerify][foundIndex] = createStamp(
+                    _providerId,
+                    _userHash
+                );
             } else {
                 revert(
                     "Address already verified; cannot re-verify yet, wait at least half the verifyDayThreshold"
@@ -71,15 +88,15 @@ contract GithubVerification {
             }
         }
 
-        stampHashMap[_hash] = _toVerify;
+        stampHashMap[_userHash] = _toVerify;
     }
 
     function createStamp(
         string memory _id,
-        string memory _usernameHash
+        string memory _userHash
     ) internal onlyOwner returns (Stamp memory) {
-        Stamp memory stamp = Stamp(_id, _usernameHash, block.timestamp);
-        stampHashMap[_usernameHash] = msg.sender;
+        Stamp memory stamp = Stamp(_id, _userHash, block.timestamp);
+        stampHashMap[_userHash] = msg.sender;
         return stamp;
     }
 

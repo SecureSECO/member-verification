@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import 'viem/window'
+import "viem/window";
 import {
   Account,
   createPublicClient,
@@ -12,15 +12,16 @@ import {
 import { toast, Toaster } from "react-hot-toast";
 import { GithubVerification } from "./GithubVerification";
 import { CheckBadgeIcon } from "@heroicons/react/24/solid";
+import StampCard from "./components/StampCard";
 
 const walletClient = createWalletClient({
   transport: custom(window.ethereum!),
-})
+});
 
 export const apiUrl = process.env.REACT_APP_API_URL;
 console.log(apiUrl);
 
-type Stamp = [id: string, _hash: string, verifiedAt: number];
+export type Stamp = [id: string, _hash: string, verifiedAt: number];
 
 // TODO: Move to a db or something
 const availableStamps = ["KYC", "github", "onlyfans", "the hub", "google plus"];
@@ -89,12 +90,14 @@ function App() {
         const res = await fetch(
           `${apiUrl}/getStamps?address=${account.address}`
         );
-        const { ok, stamps } = await res.json();
+        const _res = await res.json();
+        const { ok, stamps } = _res;
 
         if (ok) {
           setStamps(stamps);
         } else {
           toast.error("Can't retrieve verification status");
+          console.log(_res);
         }
       };
 
@@ -133,34 +136,5 @@ function App() {
     </>
   );
 }
-
-const StampCard = ({
-  providerId,
-  stamp,
-  verify,
-}: {
-  providerId: string;
-  stamp: Stamp | null;
-  verify: (providerId: string) => void;
-}) => {
-  const verified: boolean =
-    stamp != null && stamp[2] > Date.now() / 1000 - 60 * 24 * 60 * 60; // 60 days
-
-  return (
-    <div className="card">
-      <div className="flex gap-x-2 items-center">
-        {verified && <CheckBadgeIcon className="text-green-500 max-w-[24px]" />}
-        <h2 className="capitalize">{providerId}</h2>
-      </div>
-      <p className="mt-2">
-        Last verified at:{" "}
-        {stamp ? new Date(stamp[2] * 1000).toDateString() : "never"}
-      </p>
-      <button className="bg-black/80 mt-4" onClick={() => verify(providerId)}>
-        {verified ? "Reverify" : "Verify"}
-      </button>
-    </div>
-  );
-};
 
 export default App;

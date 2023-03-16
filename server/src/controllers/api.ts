@@ -6,10 +6,11 @@ import fetch from "node-fetch";
 import { Octokit } from "@octokit/core";
 import { Joi } from "celebrate";
 import crypto from "crypto";
+import createKeccakHash from "keccak";
 
 const web3provider = new Web3(
     new Web3.providers.HttpProvider(
-        config.NODE_ENV === "development" ? "http://localhost:12346" : "...",
+        config.NODE_ENV === "development" ? "http://localhost:65534" : "...",
     ),
 );
 
@@ -26,53 +27,57 @@ export const index = async (req: Request, res: Response): Promise<void> => {
 
 type ProviderID = "github" | "kyc";
 
+type VerificationData = {
+    address: string;
+    hash: string;
+    timestamp: number;
+    sig: string;
+};
+
 /**
- * Verifies a given address on the blockchain
+ * Gets proof, etc. for the user to send to the contract
  */
-const verify = async (
+const getVerificationData = async (
     address: string,
     id: number,
     providerId: ProviderID,
-): Promise<any> => {
+): Promise<VerificationData> => {
     return new Promise(async (resolve, reject) => {
         try {
-            const hash = crypto
-                .createHash("sha256")
+            const hash = createKeccakHash("keccak256")
                 .update(id + providerId + config.HASH_SECRET)
                 .digest("hex");
 
-            const tx = {
-                from: account,
-                to: contractAddress,
-                gas: 3000000,
-                data: contract.methods
-                    .verifyAddress(address, providerId, hash)
-                    .encodeABI(),
-            };
+            const proof = generateProof(address, hash);
 
-            // signTransaction is async so we need to use a promise
-            const signPromise = web3provider.eth.accounts.signTransaction(
-                tx,
-                key,
-            );
-
-            const signedTx = await signPromise;
-            const sentTx = web3provider.eth.sendSignedTransaction(
-                signedTx.rawTransaction,
-            );
-
-            sentTx.on("receipt", receipt => {
-                // console.log(receipt);
-                resolve(receipt);
-            });
-            sentTx.on("error", error => {
-                console.log(error);
-                reject(error);
-            });
+            resolve(proof);
         } catch (error) {
             reject(error);
         }
     });
+};
+
+const generateProof = (address: string, hash: string): VerificationData => {
+    const timestamp = Date.now();
+    const packed = createKeccakHash("keccak256")
+        .update(
+            web3provider.eth.abi.encodeParameters(
+                ["address", "string", "uint256"],
+                [address, hash, timestamp],
+            ),
+        )
+        .digest("hex");
+
+    const signedData = web3provider.eth.accounts.sign(packed, key);
+
+    const sig = signedData.signature;
+
+    return {
+        address,
+        hash,
+        timestamp,
+        sig,
+    };
 };
 
 // export const isVerified = async (
@@ -235,17 +240,22 @@ export const githubCallback = async (
             console.log(`Account is ${diffDays} days old`);
         }
 
-        console.log(
-            `Verifying ${state} (${data.login}, ${data.id}) on blockchain...`,
+        const verificationData = await getVerificationData(
+            state,
+            data.id,
+            "github",
         );
-        const receipt = await verify(state, data.id, "github");
 
-        console.log(`Successfully verified ${state} on blockchain!`);
+        // res.json({
+        //     ok: true,
+        //     verificationData,
+        // });
 
-        res.json({
-            ok: true,
-            message: "verified",
-        });
+        res.redirect(
+            `${config.FRONTEND_URL}/verify?address=${state}` +
+                `&hash=${verificationData.hash}&timestamp=${verificationData.timestamp}` +
+                `&sig=${verificationData.sig}`,
+        );
     } catch (error) {
         console.log(error);
         res.json({
