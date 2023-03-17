@@ -35,7 +35,8 @@ contract SignatureHelper {
         string memory _userHash,
         uint _timestamp
     ) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_toVerify, _userHash, _timestamp));
+        bytes memory packedMsg = getPackedMessage(_toVerify, _userHash, _timestamp);
+        return keccak256(packedMsg);
     }
 
     function getPackedMessage(
