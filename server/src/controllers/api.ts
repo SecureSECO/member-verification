@@ -32,7 +32,9 @@ const key = config.PRIVATE_KEY;
 // const contract = new web3provider.eth.Contract(abi as any, contractAddress);
 
 export const index = async (req: Request, res: Response): Promise<void> => {
-    res.redirect("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+    res.json({
+        message: "OK",
+    });
 };
 
 type ProviderID = "github" | "kyc";
