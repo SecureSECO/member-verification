@@ -46,6 +46,18 @@ const Main = () => {
         throw new Error("No account connected");
       }
 
+      // Check if the account has already verified
+      const stamp = stamps.find(([id]) => id === providerId);
+      if (stamp) {
+        const [, , verifiedAt] = stamp;
+        // Check if it has been more than 30 days
+        if (verifiedAt * 1000 + 30 * 24 * 60 * 60 * 1000 > Date.now()) {
+          throw new Error(
+            "You have already verified with this provider, please wait at least 30 days after the initial verification to verify again."
+          );
+        }
+      }
+
       const nonce = Math.floor(Math.random() * 1000000);
 
       // Sign a message with the account

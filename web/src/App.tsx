@@ -37,13 +37,7 @@ export const apiUrl = process.env.REACT_APP_API_URL;
 export const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
 
 // TODO: Move to a db or something
-export const availableStamps = [
-  "KYC",
-  "github",
-  "onlyfans",
-  "the hub",
-  "google plus",
-];
+export const availableStamps = ["proofofhumanity", "github", "twitter"];
 
 function App() {
   return (

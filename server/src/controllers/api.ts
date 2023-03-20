@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import config from "../config/config";
 import Web3 from "web3";
-import * as abiObj from "./GithubVerification.json";
+import * as abiObj from "./ProofOfHumanity.json";
 import fetch from "node-fetch";
 import { Octokit } from "@octokit/core";
 import { Joi } from "celebrate";
@@ -10,12 +10,13 @@ import createKeccakHash from "keccak";
 import { createPublicClient, http } from "viem";
 import { mainnet } from "viem/chains";
 
-const transport = http(
-    config.NODE_ENV === "development" ? "http://127.0.0.1:65534" : "...",
-);
+// const transport = http(
+//     config.NODE_ENV === "development" ? "http://127.0.0.1:65534" : "...",
+// );
 const client = createPublicClient({
     chain: mainnet,
-    transport,
+    transport: http(),
+    // transport,
 });
 
 const web3provider = new Web3(
@@ -37,7 +38,7 @@ export const index = async (req: Request, res: Response): Promise<void> => {
     });
 };
 
-type ProviderID = "github" | "kyc";
+type ProviderID = "github" | "proofofhumanity";
 
 type VerificationData = {
     address: string;
@@ -51,7 +52,7 @@ type VerificationData = {
  */
 const getVerificationData = async (
     address: string,
-    id: number,
+    id: string,
     providerId: ProviderID,
 ): Promise<VerificationData> => {
     return new Promise(async (resolve, reject) => {
@@ -139,8 +140,12 @@ export const authorize = async (req: Request, res: Response): Promise<void> => {
 
                 break;
 
+            case "proofofhumanity":
+                url = await proofOfHumanityUrl(address);
+                break;
+
             default:
-                throw new Error("Invalid providerId");
+                throw new Error("Invalid provider");
         }
 
         res.json({
@@ -215,7 +220,7 @@ export const githubCallback = async (
 
         const verificationData = await getVerificationData(
             state,
-            data.id,
+            data.id.toString(),
             "github",
         );
 
@@ -235,5 +240,30 @@ export const githubCallback = async (
             ok: false,
             message: error.message,
         });
+    }
+};
+
+export const proofOfHumanityUrl = async (address: string): Promise<string> => {
+    const r: any = await client.readContract({
+        address: "0xc5e9ddebb09cd64dfacab4011a0d5cedaf7c9bdb", // ProofOfHumanity
+        abi: abiObj.abi,
+        functionName: "isRegistered",
+        args: [address],
+    });
+
+    if (r === false) {
+        const verificationData = await getVerificationData(
+            address,
+            address,
+            "proofofhumanity",
+        );
+
+        return (
+            `${config.FRONTEND_URL}/verify?address=${address}` +
+            `&hash=${verificationData.hash}&timestamp=${verificationData.timestamp}` +
+            `&sig=${verificationData.sig}&providerId=proofofhumanity`
+        );
+    } else {
+        throw new Error("Not registered on Proof of Humanity");
     }
 };
