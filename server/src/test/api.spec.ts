@@ -44,4 +44,24 @@ describe("POST /api/verify", () => {
                 done();
             });
     });
+
+    it("should fail if recovered address does not match our address", done => {
+        return request(app)
+            .post("/api/verify")
+            .send({
+                address: "0x2f8Ac045D67209DcC0D7E44bf1ca8bAa4F69E211",
+                signature:
+                    // eslint-disable-next-line max-len
+                    "0x067ca180e1bfc5748ab0eaebf0060a9a94e4fd9a2019c81623bb5db543e9bba36efe08acae8e849e238014b8b349a1b56664f5bfdc4ad832d65d9bd84f180f041b",
+                nonce: "123",
+                providerId: "github",
+            })
+            .expect(400)
+            .end(function (err, res) {
+                expect(res.text).toContain(`{"ok":false,"message":"Invalid signature"}`);
+                done();
+            });
+    });
+
+    
 });
