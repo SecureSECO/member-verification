@@ -1,3 +1,5 @@
 {
-  "name": "hardhat-project"
+  "dependencies": {
+    "@aragon/osx": "^1.0.1"
+  }
 }

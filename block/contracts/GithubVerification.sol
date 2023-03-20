@@ -71,7 +71,7 @@ contract GithubVerification is SignatureHelper {
         }
 
         if (!found) {
-            stamps[_toVerify].push(createStamp(_providerId, _userHash));
+            stamps[_toVerify].push(createStamp(_providerId, _userHash, _timestamp));
         } else {
             // Check how long it has been since the last verification
             uint timeSinceLastVerification = block.timestamp -
@@ -81,7 +81,8 @@ contract GithubVerification is SignatureHelper {
             if (timeSinceLastVerification > (verifyDayThreshold / 2) * 1 days) {
                 stamps[_toVerify][foundIndex] = createStamp(
                     _providerId,
-                    _userHash
+                    _userHash,
+                    _timestamp
                 );
             } else {
                 revert(
@@ -95,9 +96,10 @@ contract GithubVerification is SignatureHelper {
 
     function createStamp(
         string memory _id,
-        string memory _userHash
+        string memory _userHash,
+        uint _timestamp
     ) internal returns (Stamp memory) {
-        Stamp memory stamp = Stamp(_id, _userHash, block.timestamp);
+        Stamp memory stamp = Stamp(_id, _userHash, _timestamp);
         stampHashMap[_userHash] = msg.sender;
         return stamp;
     }

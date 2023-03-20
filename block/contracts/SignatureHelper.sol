@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
+// Source: https://solidity-by-example.org/signature/
+
 /* Signature Verification
 
 How to Sign and Verify
