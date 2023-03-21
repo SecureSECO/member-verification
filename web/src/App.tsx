@@ -48,7 +48,7 @@ function App() {
       </header>
       <Routes>
         <Route path="/" element={<Main />} />
-        <Route path="/verify" element={<Verify />} />
+        <Route path="/finishVerification" element={<Verify />} />
       </Routes>
     </BrowserRouter>
   );

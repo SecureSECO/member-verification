@@ -230,7 +230,7 @@ export const githubCallback = async (
         // });
 
         res.redirect(
-            `${config.FRONTEND_URL}/verify?address=${state}` +
+            `${config.FRONTEND_URL}/finishVerification?address=${state}` +
                 `&hash=${verificationData.hash}&timestamp=${verificationData.timestamp}` +
                 `&sig=${verificationData.sig}&providerId=github`,
         );
