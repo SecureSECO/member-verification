@@ -1,11 +1,10 @@
 const SignatureHelper = artifacts.require("SignatureHelper");
-const createKeccakHash = require("keccak");
 const Web3 = require("web3");
-var utils = require("web3-utils");
-var ethereumjsUtil = require("ethereumjs-util");
 
-// Test suite for the SignatureHelper contract
-contract("SignatureHelper", (accounts) => {
+/**
+ * Test suite for the SignatureHelper contract
+ */
+contract("SignatureHelper", () => {
   // One time setup for the web3 constants
   const web3 = new Web3(new Web3.providers.HttpProvider("http://127.0.0.1:65534"));
 
@@ -45,13 +44,17 @@ contract("SignatureHelper", (accounts) => {
       owner.privateKey
     );
 
-  // Gets run before every test (it)
+  /**
+   * This gets run before each test. A new contract instance is created before each test.
+   */
   beforeEach(async () => {
     contractInstance = await SignatureHelper.new();
   });
 
-  // To test the abi.encodePacked and keccak256 hash of the parameters
-  // TODO: can remove the encodePacked function from the contract
+  /**
+   * The abi.encodePacked of the parameters (address, userhash, and timestamp) of the smart contract 
+   * should match the packed message in JavaScript (back-end).
+   */
   it("Packed data in contract should be equal to web3.utils.encodePacked(...)", async () => {
     const packedMessageSolidity = await contractInstance.getPackedMessage(
       address,
@@ -66,6 +69,10 @@ contract("SignatureHelper", (accounts) => {
     );
   })
 
+  /**
+   * The keccak hash of the packed message (a.k.a. messageHash) on the smart contract should match the hash of the packed 
+   * message (a.k.a. messageHash) in JavaScript (back-end).
+   */
   it("messageHash from contract should be equal to soliditySha3(packed)", async () => {
     const hashPackedMessageSolidity = await contractInstance.getMessageHash(
       address,
@@ -80,6 +87,9 @@ contract("SignatureHelper", (accounts) => {
     );
   });
 
+  /**
+   * The signed messageHash on the smart contract should match the signed messageHash in JavaScript (back-end)
+   */
   it("the signed messageHash from contract should be equal to signedHashPackedMessageWeb3", async () => {
     const signedHashPackedMessageSolidity =
       await contractInstance.getEthSignedMessageHash(
@@ -93,7 +103,11 @@ contract("SignatureHelper", (accounts) => {
     );
   });
 
-  it("recover the signer from a signature and the signed hash of the message, recovered signer is equal to owner's address", async () => {
+  /**
+   * The recovered signer from the signature and the signed messageHash (recovery using ecrecover on
+   * the smart contract) and the original signer should match.
+   */
+  it("should be able to successfully recover the signer from the signature and the signed messageHash", async () => {
     const recoveredSigner = await contractInstance.recoverSigner(
       signedHashPackedMessageWeb3,
       signature
@@ -105,7 +119,11 @@ contract("SignatureHelper", (accounts) => {
     );
   });
 
-  it("verify that a signature is from the owner's address, given the address to verify, the userhash, and the timestamp", async () => {
+  /**
+   * Given the address to verify, userHash, and the timestamp, the smart contract should be able to recreate 
+   * the signed messageHash and verify the validity of a signature.
+   */
+  it("should be able verify the validity of a signature given the address to verify, the userhash, and the timestamp", async () => {
     const verifyResult = await contractInstance.verify(
       owner.address,
       address,
