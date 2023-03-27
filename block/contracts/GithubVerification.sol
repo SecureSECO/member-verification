@@ -11,19 +11,24 @@ error Unauthorized(address sender, address toVerify);
 contract GithubVerification is SignatureHelper {
     mapping(address => Stamp[]) internal stamps;
     mapping(string => address) internal stampHashMap;
+    Threshold[] thresholdHistory;
 
     address private immutable _owner;
-
-    uint verifyDayThreshold = 60;
 
     struct Stamp {
         string id;
         string _hash;
-        uint verifiedAt;
+        uint64[] verifiedAt;
+    }
+
+    struct Threshold {
+        uint64 timestamp;
+        uint64 threshold;
     }
 
     /// @notice This constructor sets the owner of the contract
-    constructor() {
+    constructor (uint64 _threshold) {
+        thresholdHistory.push(Threshold(uint64(block.timestamp), _threshold));
         _owner = msg.sender;
     }
 
@@ -34,7 +39,7 @@ contract GithubVerification is SignatureHelper {
     function verifyAddress(
         address _toVerify,
         string calldata _userHash,
-        uint _timestamp,
+        uint64 _timestamp,
         string calldata _providerId,
         bytes calldata _proofSignature
     ) external {
@@ -71,19 +76,17 @@ contract GithubVerification is SignatureHelper {
         }
 
         if (!found) {
+            // Create new stamp if user does not already have a stamp for this providerId
             stamps[_toVerify].push(createStamp(_providerId, _userHash, _timestamp));
-        } else {
+        } else { // If user already has a stamp for this providerId
             // Check how long it has been since the last verification
-            uint timeSinceLastVerification = block.timestamp -
-                stamps[_toVerify][foundIndex].verifiedAt;
+            uint64[] storage verifiedAt = stamps[_toVerify][foundIndex].verifiedAt;
+            uint64 timeSinceLastVerification = uint64(block.timestamp) -
+                verifiedAt[verifiedAt.length - 1];
 
             // If it has been more than (verifyDayThreshold / 2) days, update the stamp
-            if (timeSinceLastVerification > (verifyDayThreshold / 2) * 1 days) {
-                stamps[_toVerify][foundIndex] = createStamp(
-                    _providerId,
-                    _userHash,
-                    _timestamp
-                );
+            if (timeSinceLastVerification > uint64((thresholdHistory[thresholdHistory.length - 1].threshold / 2) * 1 days)) {
+                verifiedAt.push(_timestamp);
             } else {
                 revert(
                     "Address already verified; cannot re-verify yet, wait at least half the verifyDayThreshold"
@@ -97,9 +100,11 @@ contract GithubVerification is SignatureHelper {
     function createStamp(
         string memory _id,
         string memory _userHash,
-        uint _timestamp
+        uint64 _timestamp
     ) internal returns (Stamp memory) {
-        Stamp memory stamp = Stamp(_id, _userHash, _timestamp);
+        uint64[] memory verifiedAt = new uint64[](1);
+        verifiedAt[0] = _timestamp;
+        Stamp memory stamp = Stamp(_id, _userHash, verifiedAt);
         stampHashMap[_userHash] = msg.sender;
         return stamp;
     }
@@ -125,11 +130,56 @@ contract GithubVerification is SignatureHelper {
         return stamps[_toCheck];
     }
 
+    function getStampsAt(
+        address _toCheck,
+        uint _timestamp
+    ) external view returns (Stamp[] memory) {
+        Stamp[] memory stampsAt = new Stamp[](stamps[_toCheck].length);
+        uint count = 0;
+
+        // Loop through stamps
+        for (uint i = 0; i < stamps[_toCheck].length; i++) {
+            uint64[] storage verifiedAt = stamps[_toCheck][i].verifiedAt;
+            uint currentTimestampIndex = thresholdHistory.length - 1;
+
+            // Reverse for loop, because more recent dates are at the end of the array
+            for (uint j = verifiedAt.length; j > 0; j--) {
+                while (currentTimestampIndex > 0 && verifiedAt[j - 1] < thresholdHistory[currentTimestampIndex].threshold) {
+                    currentTimestampIndex--;
+                }
+                
+                uint64 verifyDayThreshold = thresholdHistory[currentTimestampIndex].threshold;
+
+                // Check if the verification timestamp is within the verifyDayThreshold
+                if (verifiedAt[j - 1] + (verifyDayThreshold * 1 days) > _timestamp 
+                    && verifiedAt[j - 1] < _timestamp) {
+                    stampsAt[count] = stamps[_toCheck][i];
+                    count++;
+                    break;
+                } else if (verifiedAt[j - 1] + (verifyDayThreshold * 1 days) < _timestamp) {
+                    break;
+                }
+            }
+        }
+
+        Stamp[] memory stampsAtTrimmed = new Stamp[](count);
+
+        for (uint i = 0; i < count; i++) {
+            stampsAtTrimmed[i] = stampsAt[i];
+        }
+
+        return stampsAtTrimmed;
+    }
+
+
     /// @notice This function can only be called by the owner, and it sets the verifyDayThreshold
     /// @dev Sets the verifyDayThreshold
     /// @param _days The number of days to set the verifyDayThreshold to
-    function setVerifyDayThreshold(uint _days) external onlyOwner {
-        verifyDayThreshold = _days;
+    function setVerifyDayThreshold(uint64 _days) external onlyOwner {
+        Threshold memory lastThreshold = thresholdHistory[thresholdHistory.length - 1];
+        require(lastThreshold.threshold != _days, "Threshold already set to this value");
+        
+        thresholdHistory.push(Threshold(uint64(block.timestamp), _days));
     }
 
     modifier onlyOwner() {
