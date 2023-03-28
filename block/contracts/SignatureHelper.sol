@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-// Source: https://solidity-by-example.org/signature/
+// Modified source from: https://solidity-by-example.org/signature/
 
 /* Signature Verification
 
@@ -17,21 +17,28 @@ How to Sign and Verify
 3. Compare recovered signer to claimed signer
 */
 
+/// @title Set of (helper) functions for signature verification
 contract SignatureHelper {
-    /* 1. Unlock MetaMask account
-    ethereum.enable()
-    */
+    /// @notice Packs three parameters (address, string, uint) into one packed message
+    /// @dev This is done before the keccak256 hash
+    /// @param _toVerify The address to verify
+    /// @param _userHash Unique user hash on the platform of the stamp (GH, PoH, etc.)
+    /// @param _timestamp Timestamp at which the proof was generated
+    /// @return bytes Returns the packed message
+    function getPackedMessage(
+        address _toVerify,
+        string memory _userHash,
+        uint _timestamp
+    ) public pure returns (bytes memory) {
+        return abi.encodePacked(_toVerify, _userHash, _timestamp);
+    }
 
-    /* 2. Get message hash to sign
-    getMessageHash(
-        0x14723A09ACff6D2A60DcdF7aA4AFf308FDDC160C,
-        123,
-        "coffee and donuts",
-        1
-    )
-
-    hash = "0xcf36ac4f97dc10d91fc2cbb20d718e94a8cbfe0f82eaedc6a4aa38946fb797cd"
-    */
+    /// @notice Hashes a (packed) message using keccak256
+    /// @dev This is done after packing the parameters 
+    /// @param _toVerify The address to verify
+    /// @param _userHash Unique user hash of the platform of the stamp (GH, PoH, etc.)
+    /// @param _timestamp Timestamp at which the proof was generated
+    /// @return bytes Returns the hash of the packed message (a.k.a. messageHash)
     function getMessageHash(
         address _toVerify,
         string memory _userHash,
@@ -41,25 +48,9 @@ contract SignatureHelper {
         return keccak256(packedMsg);
     }
 
-    function getPackedMessage(
-        address _toVerify,
-        string memory _userHash,
-        uint _timestamp
-    ) public pure returns (bytes memory) {
-        return abi.encodePacked(_toVerify, _userHash, _timestamp);
-    }
-
-    /* 3. Sign message hash
-    # using browser
-    account = "copy paste account of signer here"
-    ethereum.request({ method: "personal_sign", params: [account, hash]}).then(console.log)
-
-    # using web3
-    web3.personal.sign(hash, web3.eth.defaultAccount, console.log)
-
-    Signature will be different for different accounts
-    0x993dab3dd91f5c6dc28e17439be475478f5635c92a56e17e82349d3fb2f166196f466c0b4e0c146f285204f0dcb13e5ae67bc33f4b888ec32dfe0a063e8f3f781b
-    */
+    /// @notice Signs the messageHash with a standard prefix
+    /// @param _messageHash The hash of the packed message (messageHash) to be signed
+    /// @return bytes32 Returns the signed messageHash
     function getEthSignedMessageHash(
         bytes32 _messageHash
     ) public pure returns (bytes32) {
@@ -76,28 +67,32 @@ contract SignatureHelper {
             );
     }
 
-    /* 4. Verify signature
-    signer = 0xB273216C05A8c0D4F0a4Dd0d7Bae1D2EfFE636dd
-    to = 0x14723A09ACff6D2A60DcdF7aA4AFf308FDDC160C
-    amount = 123
-    message = "coffee and donuts"
-    nonce = 1
-    signature =
-        0x993dab3dd91f5c6dc28e17439be475478f5635c92a56e17e82349d3fb2f166196f466c0b4e0c146f285204f0dcb13e5ae67bc33f4b888ec32dfe0a063e8f3f781b
-    */
+    /// @notice Verify a signature
+    /// @dev Generate the signed messageHash from the parameters to verify the signature against
+    /// @param _signer The signer of the signature (the owner of the contract)
+    /// @param _toVerify The address to verify
+    /// @param _userHash Unique user hash of the platform of the stamp (GH, PoH, etc.)
+    /// @param _timestamp Timestamp at which the proof was generated
+    /// @param _signature The signature of the proof signed by the signer
+    /// @return bool Returns the result of the verification, where true indicates success and false indicates failure
     function verify(
         address _signer,
         address _toVerify,
         string calldata _userHash,
         uint _timestamp,
-        bytes memory signature
+        bytes memory _signature
     ) public pure returns (bool) {
         bytes32 messageHash = getMessageHash(_toVerify, _userHash, _timestamp);
         bytes32 ethSignedMessageHash = getEthSignedMessageHash(messageHash);
 
-        return recoverSigner(ethSignedMessageHash, signature) == _signer;
+        return recoverSigner(ethSignedMessageHash, _signature) == _signer;
     }
 
+    /// @notice Recover the signer from the signed messageHash and the signature
+    /// @dev This uses ecrecover
+    /// @param _ethSignedMessageHash The signed messageHash created from the parameters
+    /// @param _signature The signature of the proof signed by the signer
+    /// @return address Returns the recovered address
     function recoverSigner(
         bytes32 _ethSignedMessageHash,
         bytes memory _signature
@@ -107,6 +102,12 @@ contract SignatureHelper {
         return ecrecover(_ethSignedMessageHash, v, r, s);
     }
 
+    /// @notice Splits the signature into r, s, and v
+    /// @dev This is necessary for the ecrecover function
+    /// @param sig The signature
+    /// @return r Returns the first 32 bytes of the signature
+    /// @return s Returns the second 32 bytes of the signature
+    /// @return v Returns the last byte of the signature
     function splitSignature(
         bytes memory sig
     ) public pure returns (bytes32 r, bytes32 s, uint8 v) {
