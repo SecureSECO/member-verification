@@ -120,7 +120,7 @@ contract("GithubVerification", async (accounts) => {
    * This gets run before each test. A new contract instance is created before each test.
    */
   beforeEach(async () => {
-    contractInstance = await GithubVerification.new({
+    contractInstance = await GithubVerification.new(VERIFY_DAY_THRESHOLD, {
       from: owner,
     });
   });
@@ -298,7 +298,7 @@ contract("GithubVerification", async (accounts) => {
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
         assert(stamps[0][0] === "github", "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
-        assert(stamps[0][2] == timestamp, "Timestamps not equal");
+        assert(stamps[0][2][0] == timestamp, "Timestamps not equal");
 
         // New timestamp and proof (within 30 days)
         const newTimestamp = Math.floor(new Date().getTime() / 1000);
@@ -333,9 +333,10 @@ contract("GithubVerification", async (accounts) => {
      * Users should be able to reverify after 30 days have passed.
      */
     it("Should be able to reverify after half the verifyDayThreshold has passed", async () => {
+      // Create a snapshot we can return to after manually increasing time on the chain
+      const snapshotA = await snapshot();
       try {
-        // Create a snapshot we can return to after manually increasing time on the chain
-        const snapshotA = await snapshot();
+        
 
         // Alice's first verification, this should succeed
         await contractInstance.verifyAddress(
@@ -351,7 +352,7 @@ contract("GithubVerification", async (accounts) => {
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
         assert(stamps[0][0] === "github", "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
-        assert(stamps[0][2] == timestamp, "Timestamps not equal");
+        assert(stamps[0][2][0] == timestamp, "Timestamps not equal");
 
         // Manually increase the time on the blockchain by VERIFICATION_DAY_THRESHOLD / 2 days
         await time.increase(VERIFY_DAY_THRESHOLD / 2 * 24 * 60 * 60); // Time in seconds
@@ -382,14 +383,98 @@ contract("GithubVerification", async (accounts) => {
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
         assert(stamps[0][0] === "github", "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
-        assert(stamps[0][2] == newTimestamp, "New timestamps not equal");
-
+        assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
+        assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
         await snapshotA.restore();
       } catch (error) {
         console.log(error);
+        await snapshotA.restore();
         assert(false, "This should not have thrown an error");
-        return;
+      }
+      
+    });
+
+    // TODO: fix comments later
+    it("Should be able to correctly retrieve the stamps at any given timestamp", async () => {
+      // Create a snapshot we can return to after manually increasing time on the chain
+      const snapshotA = await snapshot();
+      try {
+
+        // Alice's first verification, this should succeed
+        await contractInstance.verifyAddress(
+          alice,
+          userHash,
+          timestamp,
+          "github",
+          signature
+        );
+
+        // Check if first verification went successfully
+        let stamps = await contractInstance.getStamps(alice)
+        assert(stamps.length === 1, "Length of stamps array is not equal to 1");
+        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][1] === userHash, "Userhashes not equal");
+        assert(stamps[0][2][0] == timestamp, "Timestamps not equal");
+
+        // Manually increase the time on the blockchain by VERIFICATION_DAY_THRESHOLD / 2 days
+        await time.increase(VERIFY_DAY_THRESHOLD * 2 * 24 * 60 * 60); // Time in seconds
+
+        // New timestamp VERIFICATION_DAY_THRESHOLD / 2 days from now (which should match the current blockchain time)
+        const newTimestamp = Math.floor(
+          (new Date().getTime() + VERIFY_DAY_THRESHOLD * 2 * 24 * 60 * 60 * 1000) / 1000
+        );
+
+        const { signature: newSignature } = await createSignature(
+          newTimestamp,
+          alice,
+          ownerPrivKey
+        );
+
+        // Alice's second verification (more than half the verifyDayThreshold after the first) -> this should succeed
+        // Because we allow reverifications after half the verifyDayThreshold (which is VERIFICATION_DAY_THRESHOLD / 2 days)
+        await contractInstance.verifyAddress(
+          alice,
+          userHash,
+          newTimestamp,
+          "github",
+          newSignature
+        );
+
+        // Check if reverification successfully updated the timestamp on Alice's GitHub stamp
+        stamps = await contractInstance.getStamps(alice);
+        assert(stamps.length === 1, "Length of stamps array is not equal to 1");
+        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][1] === userHash, "Userhashes not equal");
+        assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
+        assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
+
+        stamps = await contractInstance.getStampsAt(alice, timestamp + 60);
+
+        assert(stamps.length === 1, "Length of stamps array is not equal to 1");
+        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][1] === userHash, "Userhashes not equal");
+        assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
+        assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
+          
+        stamps = await contractInstance.getStampsAt(alice, timestamp + VERIFY_DAY_THRESHOLD*24*60*60 + 60);
+
+        assert(stamps.length === 0, "Length of stamps array is not equal to 0");
+
+        stamps = await contractInstance.getStampsAt(alice, newTimestamp + 60);
+
+        assert(stamps.length === 1, "Length of stamps array is not equal to 1");
+        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][1] === userHash, "Userhashes not equal");
+        assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
+        assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
+          
+        await snapshotA.restore();
+      } catch (error) {
+        console.log(error);
+        await snapshotA.restore();
+        assert(false, "This should not have thrown an error");
       }
     });
+
   });
 });
