@@ -3,8 +3,6 @@ pragma solidity ^0.8.0;
 
 import "./SignatureHelper.sol";
 
-error Unauthorized(address sender, address toVerify);
-
 /// @title A contract to verify addresses
 /// @author JSC LEE
 /// @notice You can use this contract to verify addresses
@@ -15,6 +13,7 @@ contract GithubVerification is SignatureHelper {
 
     address private immutable _owner;
 
+    // A stamp defines proof of verification for a user on a specific platform at a specific date
     struct Stamp {
         string id;
         string _hash;
@@ -97,8 +96,13 @@ contract GithubVerification is SignatureHelper {
         stampHashMap[_userHash] = _toVerify;
     }
 
+    /// @notice Creates a stamp for a user
+    /// @param _providerId Unique id for the provider (github, proofofhumanity, etc.)
+    /// @param _userHash Unique user hash on the platform of the stamp (GH, PoH, etc.)
+    /// @param _timestamp Timestamp at which the proof was generated
+    /// @return Stamp Returns the created stamp
     function createStamp(
-        string memory _id,
+        string memory _providerId,
         string memory _userHash,
         uint64 _timestamp
     ) internal returns (Stamp memory) {
@@ -129,6 +133,7 @@ contract GithubVerification is SignatureHelper {
     ) external view returns (Stamp[] memory) {
         return stamps[_toCheck];
     }
+
 
     function getStampsAt(
         address _toCheck,
@@ -170,9 +175,8 @@ contract GithubVerification is SignatureHelper {
 
         return stampsAtTrimmed;
     }
-
-
-    /// @notice This function can only be called by the owner, and it sets the verifyDayThreshold
+    
+    /// @notice This function can only be called by the owner to set the verifyDayThreshold
     /// @dev Sets the verifyDayThreshold
     /// @param _days The number of days to set the verifyDayThreshold to
     function setVerifyDayThreshold(uint64 _days) external onlyOwner {
