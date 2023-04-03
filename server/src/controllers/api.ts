@@ -51,7 +51,7 @@ const getPrivateKey = async () => {
 
         return private_key.toString("hex");
     }
-}
+};
 
 type ProviderID = "github" | "proofofhumanity";
 
@@ -85,7 +85,10 @@ const getVerificationData = async (
     });
 };
 
-const generateProof = async (address: string, hash: string): Promise<VerificationData> => {
+const generateProof = async (
+    address: string,
+    hash: string,
+): Promise<VerificationData> => {
     const timestamp = Math.floor(Date.now() / 1000);
     const hashedMessage = web3provider.utils.soliditySha3(
         web3provider.utils.encodePacked(
@@ -267,7 +270,7 @@ export const proofOfHumanityUrl = async (address: string): Promise<string> => {
         args: [address],
     });
 
-    if (r === false) {
+    if (r === true) {
         const verificationData = await getVerificationData(
             address,
             address,
