@@ -17,7 +17,7 @@ app.use(express.json());
 app.use(cors());
 
 // Express configuration
-app.set("port", process.env.PORT || 6969);
+app.set("port", process.env.PORT || 43210);
 // app.set("views", path.join(__dirname, "../views"));
 // app.set("view engine", "pug");
 
