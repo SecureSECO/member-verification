@@ -259,7 +259,7 @@ export const proofOfHumanityUrl = async (address: string): Promise<string> => {
         );
 
         return (
-            `${config.FRONTEND_URL}/verify?address=${address}` +
+            `${config.FRONTEND_URL}/verification/finish?address=${address}` +
             `&hash=${verificationData.hash}&timestamp=${verificationData.timestamp}` +
             `&sig=${verificationData.sig}&providerId=proofofhumanity`
         );
