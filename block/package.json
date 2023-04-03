@@ -6,6 +6,7 @@
     "dotenv": "^16.0.3",
     "ethereumjs-util": "^7.1.5",
     "ethereumjs-wallet": "^1.0.2",
+    "ethers": "^6.2.3",
     "hdkey": "^2.1.0",
     "keccak": "^3.0.3",
     "web3": "^1.8.2",

@@ -2,80 +2,15 @@
 const GithubVerification = artifacts.require("GithubVerification");
 
 const Web3 = require("web3");
-const bip39 = require("bip39");
-const hdkey = require("hdkey");
 const { time, snapshot } = require("@openzeppelin/test-helpers");
+const { getPrivateKeyFromFirstAddress, createSignature, days } = require("./utils/helper");
+const { ethers } = require("ethers");
 
 const dotenv = require("dotenv");
 dotenv.config();
 
 const VERIFY_DAY_THRESHOLD = 60;
-
-/**
- *
- * @param {string} hdkDerivePath The derivation path of the accounts (m44'60'0'0account_index). Defaults to the first account.
- * @returns {string} The private key as a hexadecimal string.
- */
-const getPrivateKeyFromFirstAddress = async (
-  hdkDerivePath = "m/44'/60'/0'/0/0"
-) => {
-  const seed = await bip39.mnemonicToSeed(process.env.MNEMONIC);
-  const hdk = hdkey.fromMasterSeed(seed);
-  const addr_node = hdk.derive(hdkDerivePath); // gets first account
-  const private_key = addr_node.privateKey;
-
-  return private_key.toString("hex");
-};
-
-/**
- *
- * @param {number} timestamp Timestamp at which the proof is made
- * @param {string} toVerify Account address to verify
- * @param {string} ownerPrivKey Private key of the signer
- * @returns
- */
-const createSignature = async (timestamp, toVerify, ownerPrivKey) => {
-  // One time setup for the web3 constants
-  const web3 = new Web3(
-    new Web3.providers.HttpProvider("http://127.0.0.1:65534")
-  );
-
-  const userHash =
-    "090d4910f4b4038000f6ea86644d55cb5261a1dc1f006d928dcc049b157daff8";
-
-  const packedMessage = web3.utils.encodePacked(
-    {
-      type: "address",
-      value: toVerify,
-    },
-    {
-      type: "string",
-      value: userHash,
-    },
-    {
-      type: "uint256",
-      value: timestamp,
-    }
-  );
-
-  const hashPackedMessage = web3.utils.soliditySha3(packedMessage);
-
-  const { messageHash: signedHashPackedMessage, signature } =
-    web3.eth.accounts.sign(hashPackedMessage, ownerPrivKey);
-
-  const ret = {
-    address: toVerify,
-    timestamp,
-    ownerPrivKey,
-    userHash,
-    packedMessage,
-    hashPackedMessage,
-    signedHashPackedMessage,
-    signature,
-  };
-
-  return ret;
-};
+const REVERIFY_DAY_THRESHOLD = 30;
 
 /**
  * Test suite for the main contract of the Github Verification
@@ -120,7 +55,7 @@ contract("GithubVerification", async (accounts) => {
    * This gets run before each test. A new contract instance is created before each test.
    */
   beforeEach(async () => {
-    contractInstance = await GithubVerification.new(VERIFY_DAY_THRESHOLD, {
+    contractInstance = await GithubVerification.new(VERIFY_DAY_THRESHOLD, REVERIFY_DAY_THRESHOLD, {
       from: owner,
     });
   });
@@ -447,18 +382,151 @@ contract("GithubVerification", async (accounts) => {
         assert(stamps[0][1] === userHash, "Userhashes not equal");
         assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
         assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
+        console.log(stamps);
+        console.log(timestamp, newTimestamp);
 
         stamps = await contractInstance.getStampsAt(alice, timestamp + 60);
+        assert(stamps.length === 1, "Length of stamps array is not equal to 1");
+        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][1] === userHash, "Userhashes not equal");
+        assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
 
+//         web3.eth.abi.decodeLog([{
+        //     type: 'string',
+        //     name: 'myString'
+        // },{
+        //     type: 'uint256',
+        //     name: 'myNumber',
+        //     indexed: true
+        // },{
+        //     type: 'uint8',
+        //     name: 'mySmallNumber',
+        //     indexed: true
+        // }],
+        // '0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000748656c6c6f252100000000000000000000000000000000000000000000000000',
+        // ['0x000000000000000000000000000000000000000000000000000000000000f310', '0x0000000000000000000000000000000000000000000000000000000000000010']);
+        // > Result {
+        //     '0': 'Hello%!',
+        //     '1': '62224',
+        //     '2': '16',
+        //     myString: 'Hello%!',
+        //     myNumber: '62224',
+        //     mySmallNumber: '16'
+        // }
+          
+        stamps = await contractInstance.getStampsAt(alice, timestamp + days(VERIFY_DAY_THRESHOLD) + 60);
+        assert(stamps.length === 0, "Length of stamps array is not equal to 0");
+
+        stamps = await contractInstance.getStampsAt(alice, newTimestamp + 60);
+        console.log(stamps);
+        assert(stamps.length === 1, "Length of stamps array is not equal to 1");
+        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][1] === userHash, "Userhashes not equal");
+        assert(stamps[0][2].length == 1, "Should only have one timestamp");
+        assert(stamps[0][2][0] == timestamp, "New timestamps not equal");
+        assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
+          
+        await snapshotA.restore();
+      } catch (error) {
+        console.log(error);
+
+
+        await snapshotA.restore();
+
+        assert(false, "This should not have thrown an error");
+      }
+    });
+
+    /*
+      * This test checks if the contract correctly returns the validity of a user at a given timestamp
+      * even after the verifyDayThreshold has been changed
+      * The timeline for the test will be as follows:
+      * 
+      * OOOOOO_____OOO_____
+      * 
+      * where all O's are timestamps where the user is valid and all _'s are timestamps where the user is invalid
+      * Tests for validity will be done at the following timestamps (marked with X):
+      * 
+      *    X  X    X  X
+      * OOOOOO_____OOO_____
+      * 
+    */
+    xit("Should give correct validity at given timestamp even after verifyDayThreshold change", async () => {
+      // Create a snapshot we can return to after manually increasing time on the chain
+      const snapshotA = await snapshot();
+      try {
+
+        /*
+         * Alice's first verification, this should succeed
+        */
+        await contractInstance.verifyAddress(
+          alice,
+          userHash,
+          timestamp,
+          "github",
+          signature
+        );
+
+        // Check if first verification went successfully
+        let stamps = await contractInstance.getStamps(alice)
+        assert(stamps.length === 1, "Length of stamps array is not equal to 1");
+        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][1] === userHash, "Userhashes not equal");
+        assert(stamps[0][2][0] == timestamp, "Timestamps not equal");
+
+        // Manually increase the time on the blockchain by VERIFICATION_DAY_THRESHOLD * 2 days
+        await time.increase(VERIFY_DAY_THRESHOLD * 2 * 24 * 60 * 60); // Time in seconds
+
+        /*
+          * Change the verifyDayThreshold to be half of what it was before
+        */
+        await contractInstance.setVerifyDayThreshold(Math.floor(VERIFY_DAY_THRESHOLD / 2), {
+          from: owner
+        });
+
+        // New timestamp VERIFICATION_DAY_THRESHOLD * 2 days from now (which should match the current blockchain time)
+        const newTimestamp = Math.floor(
+          (new Date().getTime() + VERIFY_DAY_THRESHOLD * 2 * 24 * 60 * 60 * 1000) / 1000
+        );
+
+        const { signature: newSignature } = await createSignature(
+          newTimestamp,
+          alice,
+          ownerPrivKey
+        );
+
+        /*
+         * Alice's second verification after verificationDayThreshold was halved, this should succeed
+        */
+        await contractInstance.verifyAddress(
+          alice,
+          userHash,
+          newTimestamp,
+          "github",
+          newSignature
+        );
+
+        // Check if reverification successfully updated the timestamp on Alice's GitHub stamp
+        stamps = await contractInstance.getStamps(alice);
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
         assert(stamps[0][0] === "github", "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
         assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
         assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
-          
-        stamps = await contractInstance.getStampsAt(alice, timestamp + VERIFY_DAY_THRESHOLD*24*60*60 + 60);
 
-        assert(stamps.length === 0, "Length of stamps array is not equal to 0");
+        /*
+          * Check if Alice is valid at the aforementioned timestamps
+        */
+        // Assert validity
+        stamps = await contractInstance.getStampsAt(alice, timestamp + days(30));
+        assert(stamps.length === 1, "Length of stamps array is not equal to 1");
+        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][1] === userHash, "Userhashes not equal");
+        assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
+          
+        // Assert invalidity
+        stamps = await contractInstance.getStampsAt(alice, timestamp + days(VERIFY_DAY_THRESHOLD));
+        assert(stamps.length === 0, "Expected address to be invalid at this timestamp; length of stamps array is not equal to 0");
 
         stamps = await contractInstance.getStampsAt(alice, newTimestamp + 60);
 
@@ -475,6 +543,5 @@ contract("GithubVerification", async (accounts) => {
         assert(false, "This should not have thrown an error");
       }
     });
-
   });
 });
