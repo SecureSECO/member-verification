@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [14.x, 16.x, 18.x]
+        node-version: [18.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
     name: Build using Node ${{ matrix.node-version }}
     steps:
@@ -38,8 +38,10 @@ jobs:
     # - run: npm ci
     # - run: npm run build --if-present
     # - run: npm test --passWithNoTests
+        # npm install truffle -g
     - name: Install truffle
-      run: npm install truffle -g
+      run: |
+        echo "$(pwd)"
     - name: Run truffle tests
       run: truffle test --bail
       
