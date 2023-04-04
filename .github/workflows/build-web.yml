@@ -31,7 +31,13 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
-    - run: npm ci
-    - run: npm run build --if-present
+    # - run: npm ci
+    # - run: npm run build --if-present
+    # - run: npm test --passWithNoTests
+    - run: cd block
+    - run: truffle test --bail
+    - run: cd ../web
+    - run: npm test --passWithNoTests
+    - run: cd ../server
     - run: npm test --passWithNoTests
       
