@@ -9,7 +9,9 @@ error Bababooey(uint64 verifiedAt);
 /// @author JSC LEE
 /// @notice You can use this contract to verify addresses
 contract GithubVerification is SignatureHelper {
+    // Map from user to their stamps
     mapping(address => Stamp[]) internal stamps;
+    // Map from userhash to address to make sure the userhash isn't already used by another address
     mapping(string => address) internal stampHashMap;
 
     /// @notice The thresholdHistory array stores the history of the verifyDayThreshold variable. This is needed because we might want to check if some stamps were valid in the past.
@@ -23,8 +25,8 @@ contract GithubVerification is SignatureHelper {
 
     /// @notice A stamp defines proof of verification for a user on a specific platform at a specific date
     struct Stamp {
-        string id; // Unique id for the provider (github, proofofhumanity, etc.)
-        string _hash; // Hash of some unique user data of the provider (username, email, etc.)
+        string providerId; // Unique id for the provider (github, proofofhumanity, etc.)
+        string userHash; // Hash of some unique user data of the provider (username, email, etc.)
         uint64[] verifiedAt; // Timestamps at which the user has verified
     }
 
@@ -75,7 +77,7 @@ contract GithubVerification is SignatureHelper {
 
         for (uint i = 0; i < stamps[_toVerify].length; i++) {
             if (
-                keccak256(abi.encodePacked(stamps[_toVerify][i].id)) ==
+                keccak256(abi.encodePacked(stamps[_toVerify][i].providerId)) ==
                 keccak256(abi.encodePacked(_providerId))
             ) {
                 found = true;
@@ -108,6 +110,30 @@ contract GithubVerification is SignatureHelper {
         }
 
         stampHashMap[_userHash] = _toVerify;
+    }
+
+    function unverify(string calldata _providerId) external {
+        // Assume all is good in the world
+        Stamp[] storage stampsAt = stamps[msg.sender];
+
+        // Look up the corresponding stamp for the provider
+        for (uint8 i = 0; i < stampsAt.length; i++) {
+            if (stringsAreEqual(stampsAt[i].providerId, _providerId)) {
+                // Remove the mapping from userhash to address
+                stampHashMap[stampsAt[i].userHash] = address(0);
+
+                // Remove stamp from stamps array (we don't care about order so we can just swap and pop)
+                stampsAt[i] = stampsAt[stampsAt.length - 1];
+                stampsAt.pop();
+                return;
+            }
+        }
+
+        revert("Could not find this provider amongst your stamps; are you sure you're verified with this provider?");
+    }
+
+    function stringsAreEqual(string memory str1, string memory str2) public pure returns (bool) {
+        return keccak256(abi.encodePacked(str1)) == keccak256(abi.encodePacked(str2));
     }
 
     /// @notice Creates a stamp for a user

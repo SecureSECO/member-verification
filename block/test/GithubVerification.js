@@ -2,9 +2,8 @@
 const GithubVerification = artifacts.require("GithubVerification");
 
 const Web3 = require("web3");
-const { time, snapshot } = require("@openzeppelin/test-helpers");
-const { getPrivateKeyFromFirstAddress, createSignature, days } = require("./utils/helper");
-const { ethers } = require("ethers");
+const { time } = require("@openzeppelin/test-helpers");
+const { getPrivateKeyFromFirstAddress, createSignature, days, snapshotHelper, shouldFail } = require("./utils/helper");
 
 const dotenv = require("dotenv");
 dotenv.config();
@@ -89,7 +88,7 @@ contract("GithubVerification", async (accounts) => {
      * The same userhash should not be used by multiple addresses.
      */
     it("Fail GitHub Verification: same userhash but verified by other address", async () => {
-      try {
+      await shouldFail(async () => {
         // Alice's verification with userhash (this should succeed)
         const aliceResult = await contractInstance.verifyAddress(
           alice,
@@ -111,14 +110,7 @@ contract("GithubVerification", async (accounts) => {
           "github",
           signature // This is not the signature for Bob
         );
-      } catch (error) {
-        assert(
-          error.message.includes("ID already affiliated with another address"),
-          "Error message is not correct"
-        );
-        return;
-      }
-      assert(false, "Verification should have failed");
+      }, "ID already affiliated with another address");
     });
 
     /**
@@ -266,9 +258,7 @@ contract("GithubVerification", async (accounts) => {
      * Users should be able to reverify after 30 days have passed.
      */
     it("Should be able to reverify after half the verifyDayThreshold has passed", async () => {
-      // Create a snapshot we can return to after manually increasing time on the chain
-      const snapshotA = await snapshot();
-      try {
+      await snapshotHelper(async () => {
         // Manually increase the time on the blockchain by VERIFICATION_DAY_THRESHOLD / 2 days
         await time.increase(VERIFY_DAY_THRESHOLD / 2 * 24 * 60 * 60); // Time in seconds
 
@@ -300,20 +290,12 @@ contract("GithubVerification", async (accounts) => {
         assert(stamps[0][1] === userHash, "Userhashes not equal");
         assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
         assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
-        await snapshotA.restore();
-      } catch (error) {
-        console.log(error);
-        await snapshotA.restore();
-        assert(false, "This should not have thrown an error");
-      }
-      
+      });
     });
 
     // TODO: fix comments later
     it("Should be able to correctly retrieve the stamps at any given timestamp", async () => {
-      // Create a snapshot we can return to after manually increasing time on the chain
-      const snapshotA = await snapshot();
-      try {
+      await snapshotHelper(async () => {
         // Manually increase the time on the blockchain by VERIFICATION_DAY_THRESHOLD * 2 days
         await time.increase(VERIFY_DAY_THRESHOLD * 2 * 24 * 60 * 60); // Time in seconds
 
@@ -354,13 +336,7 @@ contract("GithubVerification", async (accounts) => {
         assert(stamps[0][1] === userHash, "Userhashes not equal");
         assert(stamps[0][2][0] == timestamp, "New timestamps not equal");
         assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
-          
-        await snapshotA.restore();
-      } catch (error) {
-        console.log(error);
-        await snapshotA.restore();
-        assert(false, "This should not have thrown an error");
-      }
+      });
     });
 
     /*
@@ -378,9 +354,7 @@ contract("GithubVerification", async (accounts) => {
       * 
     */
     it("Should give correct validity at given timestamp even after verifyDayThreshold change", async () => {
-      // Create a snapshot we can return to after manually increasing time on the chain
-      const snapshotA = await snapshot();
-      try {
+      await snapshotHelper(async () => {
         // Manually increase the time on the blockchain by VERIFICATION_DAY_THRESHOLD * 2 days
         await time.increase(VERIFY_DAY_THRESHOLD * 2 * 24 * 60 * 60); // Time in seconds
 
@@ -435,15 +409,60 @@ contract("GithubVerification", async (accounts) => {
         assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
         assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
           
-        // stamps = await contractInstance.getStampsAt(alice, newTimestamp + VERIFY_DAY_THRESHOLD / 2)
-        // assert(stamps.length === 0, "Expected address to be invalid at this timestamp; length of stamps array is not equal to 0");
+        stamps = await contractInstance.getStampsAt(alice, newTimestamp + days(VERIFY_DAY_THRESHOLD / 2));
+        assert(stamps.length === 0, "Expected address to be invalid at this timestamp; length of stamps array is not equal to 0");
+      });
+    });
+  });
+  
+  context("Unverification tests", async () => {
+    it("should provide the utility to unverify yourself with a certain provider", async () => {
+      try {
+        // Alice's verification with userhash (this should succeed)
+        await contractInstance.verifyAddress(
+          alice,
+          userHash,
+          timestamp,
+          "github",
+          signature
+        );
 
-        await snapshotA.restore();
+        await contractInstance.unverify("github", {
+          from: alice,
+        });
+
+        const stamps = await contractInstance.getStamps(alice);
+        assert(stamps.length === 0, "Expected address to be invalid at this timestamp; length of stamps array is not equal to 0");
       } catch (error) {
         console.log(error);
-        await snapshotA.restore();
-        assert(false, "This should not have thrown an error");
+        assert(false, "Something went wrong while unverifying");
       }
     });
+
+    it("should not be able to unverify a non-existing stamp", async () => {
+      await shouldFail(async () => {
+        // This shouldn't do anything
+        await contractInstance.unverify("github", {
+          from: alice,
+        });
+      }, "Could not find this provider amongst your stamps; are you sure you're verified with this provider?");
+    }); 
+
+    it("should not be able to unverify for an unknown/unowned provider", async () => {
+      await shouldFail(async () => {
+        // Alice's verification with userhash (this should succeed)
+        await contractInstance.verifyAddress(
+          alice,
+          userHash,
+          timestamp,
+          "github",
+          signature
+        );
+        
+        await contractInstance.unverify("notARealProvider", {
+          from: alice,
+        });
+      }, "Could not find this provider amongst your stamps; are you sure you're verified with this provider?");
+    }); 
   });
 });

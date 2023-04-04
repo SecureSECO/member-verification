@@ -1,6 +1,7 @@
 const Web3 = require("web3");
 const bip39 = require("bip39");
 const hdkey = require("hdkey");
+const { snapshot } = require("@openzeppelin/test-helpers");
 
 /**
  *
@@ -70,8 +71,36 @@ const createSignature = async (timestamp, toVerify, ownerPrivKey) => {
 
 const days = (n) => n * 24 * 60 * 60;
 
+const snapshotHelper = async (body) => {
+  // Create a snapshot we can return to after manually increasing time on the chain
+  const snapshotA = await snapshot();
+  try {
+    await body();
+    await snapshotA.restore();
+  } catch (error) {
+    console.log(error);
+    await snapshotA.restore();
+    assert(false, "This should not have thrown an error");
+  }
+};
+
+const shouldFail = async (body, errorMessage) => {
+  try {
+    await body();
+  } catch (error) {
+    assert(
+      error.data.reason.includes(errorMessage),
+      "Error message is not correct"
+    );
+    return;
+  }
+  assert(false, "Verification should have failed");
+};
+
 module.exports = {
   getPrivateKeyFromFirstAddress,
   createSignature,
   days,
+  snapshotHelper,
+  shouldFail,
 };
