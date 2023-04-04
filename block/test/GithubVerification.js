@@ -377,7 +377,7 @@ contract("GithubVerification", async (accounts) => {
       * OOOOOO_____OOO_____
       * 
     */
-    xit("Should give correct validity at given timestamp even after verifyDayThreshold change", async () => {
+    it("Should give correct validity at given timestamp even after verifyDayThreshold change", async () => {
       // Create a snapshot we can return to after manually increasing time on the chain
       const snapshotA = await snapshot();
       try {
@@ -428,16 +428,66 @@ contract("GithubVerification", async (accounts) => {
         stamps = await contractInstance.getStampsAt(alice, timestamp + days(VERIFY_DAY_THRESHOLD));
         assert(stamps.length === 0, "Expected address to be invalid at this timestamp; length of stamps array is not equal to 0");
 
-        // stamps = await contractInstance.getStampsAt(alice, newTimestamp + 60);
-        // assert(stamps.length === 1, "Length of stamps array is not equal to 1");
-        // assert(stamps[0][0] === "github", "Provider id should be github");
-        // assert(stamps[0][1] === userHash, "Userhashes not equal");
-        // assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
-        // assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
+        stamps = await contractInstance.getStampsAt(alice, newTimestamp + 60);
+        assert(stamps.length === 1, "Length of stamps array is not equal to 1");
+        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][1] === userHash, "Userhashes not equal");
+        assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
+        assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
           
         // stamps = await contractInstance.getStampsAt(alice, newTimestamp + VERIFY_DAY_THRESHOLD / 2)
         // assert(stamps.length === 0, "Expected address to be invalid at this timestamp; length of stamps array is not equal to 0");
 
+        await snapshotA.restore();
+      } catch (error) {
+        console.log(error);
+        await snapshotA.restore();
+        assert(false, "This should not have thrown an error");
+      }
+    });
+
+    it("Should be able to change the reverification time", async () => {
+      // Create a snapshot we can return to after manually increasing time on the chain
+      const snapshotA = await snapshot();
+      try {
+        // Set reverify day threshold to half of what it was before
+        await contractInstance.setReverifyThreshold(REVERIFY_DAY_THRESHOLD / 2, {
+          from: owner,
+        });
+
+        // Manually increase the time on the blockchain by REVERIFICATION_DAY_THRESHOLD / 2 days
+        await time.increase(REVERIFY_DAY_THRESHOLD / 2 * 24 * 60 * 60); // Time in seconds
+
+        // New timestamp REVERIFICATION_DAY_THRESHOLD * 2 days from now (which should match the current blockchain time)
+        const newTimestamp = Math.floor(
+          (new Date().getTime() + REVERIFY_DAY_THRESHOLD / 2 * 24 * 60 * 60 * 1000) / 1000
+        );
+
+        const { signature: newSignature } = await createSignature(
+          newTimestamp,
+          alice,
+          ownerPrivKey
+        );
+
+        /*
+         * Alice's second verification after verificationDayThreshold was halved, this should succeed
+        */
+        await contractInstance.verifyAddress(
+          alice,
+          userHash,
+          newTimestamp,
+          "github",
+          newSignature
+        );
+
+        // Check if reverification successfully updated the timestamp on Alice's GitHub stamp
+        stamps = await contractInstance.getStamps(alice);
+        assert(stamps.length === 1, "Length of stamps array is not equal to 1");
+        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][1] === userHash, "Userhashes not equal");
+        assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
+        assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
+        
         await snapshotA.restore();
       } catch (error) {
         console.log(error);

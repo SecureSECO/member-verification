@@ -159,25 +159,16 @@ contract GithubVerification is SignatureHelper {
             }
 
             uint64 verifyDayThreshold = thresholdHistory[currentTimestampIndex].threshold;
-            assert(verifyDayThreshold == 60);
 
-            bool found = false;
             // Reverse for loop, because more recent dates are at the end of the array
             for (uint j = verifiedAt.length; j > 0; j--) {
-                // require(j - 1 == 1, "j==1");
-                // !(verifiedAt[j - 1] + verifyDayThreshold * 1 days > uint64(_timestamp))) {
-                //     revert Bababooey(uint64(_timestamp));
-                // } 
-
                 // If the stamp is valid at _timestamp, add it to the stampsAt array
                 if (verifiedAt[j - 1] + (verifyDayThreshold * 1 days) > _timestamp && verifiedAt[j - 1] < _timestamp) {
-                    if (!found) {
-                        stampsAt[count] = stamps[_toCheck][i];
-                        count++;
-                        found = true;
-                    }
+                    stampsAt[count] = stamps[_toCheck][i];
+                    count++;
+                    break;
                 } else if (verifiedAt[j - 1] + (verifyDayThreshold * 1 days) < _timestamp) {
-                    found = true;
+                    break;
                 }
             }
         }
