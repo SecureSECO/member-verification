@@ -377,7 +377,7 @@ contract("GithubVerification", async (accounts) => {
       * OOOOOO_____OOO_____
       * 
     */
-    xit("Should give correct validity at given timestamp even after verifyDayThreshold change", async () => {
+    it("Should give correct validity at given timestamp even after verifyDayThreshold change", async () => {
       // Create a snapshot we can return to after manually increasing time on the chain
       const snapshotA = await snapshot();
       try {
@@ -428,12 +428,12 @@ contract("GithubVerification", async (accounts) => {
         stamps = await contractInstance.getStampsAt(alice, timestamp + days(VERIFY_DAY_THRESHOLD));
         assert(stamps.length === 0, "Expected address to be invalid at this timestamp; length of stamps array is not equal to 0");
 
-        // stamps = await contractInstance.getStampsAt(alice, newTimestamp + 60);
-        // assert(stamps.length === 1, "Length of stamps array is not equal to 1");
-        // assert(stamps[0][0] === "github", "Provider id should be github");
-        // assert(stamps[0][1] === userHash, "Userhashes not equal");
-        // assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
-        // assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
+        stamps = await contractInstance.getStampsAt(alice, newTimestamp + 60);
+        assert(stamps.length === 1, "Length of stamps array is not equal to 1");
+        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][1] === userHash, "Userhashes not equal");
+        assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
+        assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
           
         // stamps = await contractInstance.getStampsAt(alice, newTimestamp + VERIFY_DAY_THRESHOLD / 2)
         // assert(stamps.length === 0, "Expected address to be invalid at this timestamp; length of stamps array is not equal to 0");
