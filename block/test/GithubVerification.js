@@ -3,7 +3,13 @@ const GithubVerification = artifacts.require("GithubVerification");
 
 const Web3 = require("web3");
 const { time } = require("@openzeppelin/test-helpers");
-const { getPrivateKeyFromFirstAddress, createSignature, days, snapshotHelper, shouldFail } = require("./utils/helper");
+const {
+  getPrivateKeyFromFirstAddress,
+  createSignature,
+  days,
+  snapshotHelper,
+  shouldFail,
+} = require("./utils/helper");
 
 const dotenv = require("dotenv");
 dotenv.config();
@@ -54,9 +60,13 @@ contract("GithubVerification", async (accounts) => {
    * This gets run before each test. A new contract instance is created before each test.
    */
   beforeEach(async () => {
-    contractInstance = await GithubVerification.new(VERIFY_DAY_THRESHOLD, REVERIFY_DAY_THRESHOLD, {
-      from: owner,
-    });
+    contractInstance = await GithubVerification.new(
+      VERIFY_DAY_THRESHOLD,
+      REVERIFY_DAY_THRESHOLD,
+      {
+        from: owner,
+      }
+    );
   });
 
   /**
@@ -117,7 +127,7 @@ contract("GithubVerification", async (accounts) => {
      * The null address should not be able to be verified
      */
     it("Fail GitHub Verification: 0x0", async () => {
-      try {
+      await shouldFail(async () => {
         // Try to verify the 0x0 address.
         // The signature is irrelevant as the check for the 0x0 address should happen before any signature verification.
         // This should throw an error.
@@ -128,29 +138,22 @@ contract("GithubVerification", async (accounts) => {
           "github",
           signature // This is not the signature for 0x0
         );
-      } catch (error) {
-        assert(
-          error.message.includes("Address cannot be 0x0"),
-          "Error message is not correct"
-        );
-        return;
-      }
-      assert(false, "Verification should have failed");
+      }, "Address cannot be 0x0");
     });
 
     /**
      * Users can only verify within an hour of signing the proof. Any attempt after this will return an error for expired proof.
      */
     it("Can't verify if proof has expired; timestamp is older than 1 hour", async () => {
-      // Create new timestamp of 61 minutes before now.
-      const newTimestamp = Math.floor(
-        (new Date().getTime() - 61 * 60 * 1000) / 1000
-      );
+      await shouldFail(async () => {
+        // Create new timestamp of 61 minutes before now.
+        const newTimestamp = Math.floor(
+          (new Date().getTime() - 61 * 60 * 1000) / 1000
+        );
 
-      // Create new signature for the new timestamp (61 minutes ago).
-      const value = await createSignature(newTimestamp, alice, ownerPrivKey);
+        // Create new signature for the new timestamp (61 minutes ago).
+        const value = await createSignature(newTimestamp, alice, ownerPrivKey);
 
-      try {
         // Try to verify with a proof older than 1 hour.
         // The signature is irrelevant as the check for the timestamp should happen before any signature verification.
         // If the timestamp is spoofed in the parameters the signature recovery will fail.
@@ -162,30 +165,23 @@ contract("GithubVerification", async (accounts) => {
           "github",
           value.signature
         );
-      } catch (error) {
-        assert(
-          error.message.includes("Proof expired, try verifying again"),
-          "Error message is not correct"
-        );
-        return;
-      }
-      assert(false, "Verification should have failed");
+      }, "Proof expired, try verifying again");
     });
 
     /**
      * A signature not signed by us should obviously fail to recover.
      */
     it("Can't verify if signature recovered address does not match owner's address", async () => {
-      // Suppose alice tries to sign the proof instead of us (the owner).
-      const alicePrivKey = await getPrivateKeyFromFirstAddress(
-        "m/44'/60'/0'/0/1"
-      );
+      await shouldFail(async () => {
+        // Suppose alice tries to sign the proof instead of us (the owner).
+        const alicePrivKey = await getPrivateKeyFromFirstAddress(
+          "m/44'/60'/0'/0/1"
+        );
 
-      // Create new signature with alice as signer and bob as the address to verify.
-      // The address to verify could also be alice themselves, but that's not relevant for our purpose.
-      const value = await createSignature(timestamp, bob, alicePrivKey);
+        // Create new signature with alice as signer and bob as the address to verify.
+        // The address to verify could also be alice themselves, but that's not relevant for our purpose.
+        const value = await createSignature(timestamp, bob, alicePrivKey);
 
-      try {
         // This should fail.
         await contractInstance.verifyAddress(
           bob,
@@ -194,14 +190,7 @@ contract("GithubVerification", async (accounts) => {
           "github",
           value.signature
         );
-      } catch (error) {
-        assert(
-          error.message.includes("Proof is not valid"),
-          "Error message is not correct"
-        );
-        return;
-      }
-      assert(false, "Verification should have failed");
+      }, "Proof is not valid");
     });
   });
 
@@ -217,7 +206,6 @@ contract("GithubVerification", async (accounts) => {
         "github",
         signature
       );
-
     });
 
     /**
@@ -260,11 +248,13 @@ contract("GithubVerification", async (accounts) => {
     it("Should be able to reverify after half the verifyDayThreshold has passed", async () => {
       await snapshotHelper(async () => {
         // Manually increase the time on the blockchain by VERIFICATION_DAY_THRESHOLD / 2 days
-        await time.increase(VERIFY_DAY_THRESHOLD / 2 * 24 * 60 * 60); // Time in seconds
+        await time.increase((VERIFY_DAY_THRESHOLD / 2) * 24 * 60 * 60); // Time in seconds
 
         // New timestamp VERIFICATION_DAY_THRESHOLD / 2 days from now (which should match the current blockchain time)
         const newTimestamp = Math.floor(
-          (new Date().getTime() + VERIFY_DAY_THRESHOLD / 2 * 24 * 60 * 60 * 1000) / 1000
+          (new Date().getTime() +
+            (VERIFY_DAY_THRESHOLD / 2) * 24 * 60 * 60 * 1000) /
+            1000
         );
 
         const { signature: newSignature } = await createSignature(
@@ -301,7 +291,9 @@ contract("GithubVerification", async (accounts) => {
 
         // New timestamp VERIFICATION_DAY_THRESHOLD / 2 days from now (which should match the current blockchain time)
         const newTimestamp = Math.floor(
-          (new Date().getTime() + VERIFY_DAY_THRESHOLD * 2 * 24 * 60 * 60 * 1000) / 1000
+          (new Date().getTime() +
+            VERIFY_DAY_THRESHOLD * 2 * 24 * 60 * 60 * 1000) /
+            1000
         );
 
         const { signature: newSignature } = await createSignature(
@@ -326,8 +318,11 @@ contract("GithubVerification", async (accounts) => {
         assert(stamps[0][1] === userHash, "Userhashes not equal");
         assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
         assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
-          
-        stamps = await contractInstance.getStampsAt(alice, timestamp + days(VERIFY_DAY_THRESHOLD) + 60);
+
+        stamps = await contractInstance.getStampsAt(
+          alice,
+          timestamp + days(VERIFY_DAY_THRESHOLD) + 60
+        );
         assert(stamps.length === 0, "Length of stamps array is not equal to 0");
 
         stamps = await contractInstance.getStampsAt(alice, newTimestamp + 60);
@@ -340,34 +335,39 @@ contract("GithubVerification", async (accounts) => {
     });
 
     /*
-      * This test checks if the contract correctly returns the validity of a user at a given timestamp
-      * even after the verifyDayThreshold has been changed
-      * The timeline for the test will be as follows:
-      * 
-      * OOOOOO_____OOO_____
-      * 
-      * where all O's are timestamps where the user is valid and all _'s are timestamps where the user is invalid
-      * Tests for validity will be done at the following timestamps (marked with X):
-      * 
-      *    X  X    X  X
-      * OOOOOO_____OOO_____
-      * 
-    */
+     * This test checks if the contract correctly returns the validity of a user at a given timestamp
+     * even after the verifyDayThreshold has been changed
+     * The timeline for the test will be as follows:
+     *
+     * OOOOOO_____OOO_____
+     *
+     * where all O's are timestamps where the user is valid and all _'s are timestamps where the user is invalid
+     * Tests for validity will be done at the following timestamps (marked with X):
+     *
+     *    X  X    X  X
+     * OOOOOO_____OOO_____
+     *
+     */
     it("Should give correct validity at given timestamp even after verifyDayThreshold change", async () => {
       await snapshotHelper(async () => {
         // Manually increase the time on the blockchain by VERIFICATION_DAY_THRESHOLD * 2 days
         await time.increase(VERIFY_DAY_THRESHOLD * 2 * 24 * 60 * 60); // Time in seconds
 
         /*
-          * Change the verifyDayThreshold to be half of what it was before
-        */
-        await contractInstance.setVerifyDayThreshold(Math.floor(VERIFY_DAY_THRESHOLD / 2), {
-          from: owner
-        });
+         * Change the verifyDayThreshold to be half of what it was before
+         */
+        await contractInstance.setVerifyDayThreshold(
+          Math.floor(VERIFY_DAY_THRESHOLD / 2),
+          {
+            from: owner,
+          }
+        );
 
         // New timestamp VERIFICATION_DAY_THRESHOLD * 2 days from now (which should match the current blockchain time)
         const newTimestamp = Math.floor(
-          (new Date().getTime() + VERIFY_DAY_THRESHOLD * 2 * 24 * 60 * 60 * 1000) / 1000
+          (new Date().getTime() +
+            VERIFY_DAY_THRESHOLD * 2 * 24 * 60 * 60 * 1000) /
+            1000
         );
 
         const { signature: newSignature } = await createSignature(
@@ -378,7 +378,7 @@ contract("GithubVerification", async (accounts) => {
 
         /*
          * Alice's second verification after verificationDayThreshold was halved, this should succeed
-        */
+         */
         await contractInstance.verifyAddress(
           alice,
           userHash,
@@ -388,33 +388,50 @@ contract("GithubVerification", async (accounts) => {
         );
 
         /*
-          * Check if Alice is valid at the aforementioned timestamps
-        */
+         * Check if Alice is valid at the aforementioned timestamps
+         */
         // Assert validity
-        stamps = await contractInstance.getStampsAt(alice, timestamp + days(VERIFY_DAY_THRESHOLD / 2));
+        stamps = await contractInstance.getStampsAt(
+          alice,
+          timestamp + days(VERIFY_DAY_THRESHOLD / 2)
+        );
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
         assert(stamps[0][0] === "github", "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
         assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
         assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
-          
-        // Assert invalidity
-        stamps = await contractInstance.getStampsAt(alice, timestamp + days(VERIFY_DAY_THRESHOLD));
-        assert(stamps.length === 0, "Expected address to be invalid at this timestamp; length of stamps array is not equal to 0");
 
+        // Assert invalidity
+        stamps = await contractInstance.getStampsAt(
+          alice,
+          timestamp + days(VERIFY_DAY_THRESHOLD)
+        );
+        assert(
+          stamps.length === 0,
+          "Expected address to be invalid at this timestamp; length of stamps array is not equal to 0"
+        );
+
+        // Assert validity
         stamps = await contractInstance.getStampsAt(alice, newTimestamp + 60);
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
         assert(stamps[0][0] === "github", "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
         assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
         assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
-          
-        stamps = await contractInstance.getStampsAt(alice, newTimestamp + days(VERIFY_DAY_THRESHOLD / 2));
-        assert(stamps.length === 0, "Expected address to be invalid at this timestamp; length of stamps array is not equal to 0");
+
+        // Assert invalidity
+        stamps = await contractInstance.getStampsAt(
+          alice,
+          newTimestamp + days(VERIFY_DAY_THRESHOLD / 2)
+        );
+        assert(
+          stamps.length === 0,
+          "Expected address to be invalid at this timestamp; length of stamps array is not equal to 0"
+        );
       });
     });
   });
-  
+
   context("Unverification tests", async () => {
     it("should provide the utility to unverify yourself with a certain provider", async () => {
       try {
@@ -432,7 +449,10 @@ contract("GithubVerification", async (accounts) => {
         });
 
         const stamps = await contractInstance.getStamps(alice);
-        assert(stamps.length === 0, "Expected address to be invalid at this timestamp; length of stamps array is not equal to 0");
+        assert(
+          stamps.length === 0,
+          "Expected address to be invalid at this timestamp; length of stamps array is not equal to 0"
+        );
       } catch (error) {
         console.log(error);
         assert(false, "Something went wrong while unverifying");
@@ -446,7 +466,7 @@ contract("GithubVerification", async (accounts) => {
           from: alice,
         });
       }, "Could not find this provider amongst your stamps; are you sure you're verified with this provider?");
-    }); 
+    });
 
     it("should not be able to unverify for an unknown/unowned provider", async () => {
       await shouldFail(async () => {
@@ -458,11 +478,11 @@ contract("GithubVerification", async (accounts) => {
           "github",
           signature
         );
-        
+
         await contractInstance.unverify("notARealProvider", {
           from: alice,
         });
       }, "Could not find this provider amongst your stamps; are you sure you're verified with this provider?");
-    }); 
+    });
   });
 });
