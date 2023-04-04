@@ -50,6 +50,7 @@ contract("GithubVerification", async (accounts) => {
 
   const { messageHash: signedHashPackedMessageWeb3, signature } =
     web3.eth.accounts.sign(hashPackedMessageWeb3, ownerPrivKey);
+    console.log(ownerPrivKey);
 
   /**
    * This gets run before each test. A new contract instance is created before each test.
