@@ -3,31 +3,41 @@ pragma solidity ^0.8.0;
 
 import "./SignatureHelper.sol";
 
+error Bababooey(uint64 verifiedAt);
+
 /// @title A contract to verify addresses
 /// @author JSC LEE
 /// @notice You can use this contract to verify addresses
 contract GithubVerification is SignatureHelper {
     mapping(address => Stamp[]) internal stamps;
     mapping(string => address) internal stampHashMap;
+
+    /// @notice The thresholdHistory array stores the history of the verifyDayThreshold variable. This is needed because we might want to check if some stamps were valid in the past.
     Threshold[] thresholdHistory;
 
+    /// @notice The reverifyThreshold determines how long a user has to wait before they can re-verify their address, in days
+    uint64 reverifyThreshold;
+
+    /// @notice Owner of the contract, can call specific functions to manage variables like the reverifyThreshold
     address private immutable _owner;
 
-    // A stamp defines proof of verification for a user on a specific platform at a specific date
+    /// @notice A stamp defines proof of verification for a user on a specific platform at a specific date
     struct Stamp {
-        string id;
-        string _hash;
-        uint64[] verifiedAt;
+        string id; // Unique id for the provider (github, proofofhumanity, etc.)
+        string _hash; // Hash of some unique user data of the provider (username, email, etc.)
+        uint64[] verifiedAt; // Timestamps at which the user has verified
     }
 
+    /// @notice A threshold defines the number of days for which a stamp is valid
     struct Threshold {
-        uint64 timestamp;
-        uint64 threshold;
+        uint64 timestamp; // Timestamp at which the threshold was set
+        uint64 threshold; // Number of days for which a stamp is valid
     }
 
     /// @notice This constructor sets the owner of the contract
-    constructor(uint64 _threshold) {
+    constructor (uint64 _threshold, uint64 _reverifyThreshold) {
         thresholdHistory.push(Threshold(uint64(block.timestamp), _threshold));
+        reverifyThreshold = _reverifyThreshold;
         _owner = msg.sender;
     }
 
@@ -87,14 +97,8 @@ contract GithubVerification is SignatureHelper {
             uint64 timeSinceLastVerification = uint64(block.timestamp) -
                 verifiedAt[verifiedAt.length - 1];
 
-            // If it has been more than (verifyDayThreshold / 2) days, update the stamp
-            if (
-                timeSinceLastVerification >
-                uint64(
-                    (thresholdHistory[thresholdHistory.length - 1].threshold /
-                        2) * 1 days
-                )
-            ) {
+            // If it has been more than reverifyThreshold days, update the stamp
+            if (timeSinceLastVerification > reverifyThreshold) {
                 verifiedAt.push(_timestamp);
             } else {
                 revert(
@@ -123,18 +127,6 @@ contract GithubVerification is SignatureHelper {
         return stamp;
     }
 
-    /// @notice This function checks if an address is verified and if the address has been verified recently (within the set verifyDayThreshold)
-    /// @param _toCheck The address to check
-    /// @return A boolean indicating if the address is verified
-    // function addressIsVerified(address _toCheck) external view returns (bool) {
-    //     if (
-    //         verifiedTimeMap[_toCheck] + (verifyDayThreshold * 1 days) <
-    //         block.timestamp
-    //     ) return false;
-
-    //     return verifiedTimeMap[_toCheck] > 0;
-    // }
-
     /// @notice This function returns the stamps of an address
     /// @param _toCheck The address to check
     /// @return An array of stamps
@@ -144,6 +136,9 @@ contract GithubVerification is SignatureHelper {
         return stamps[_toCheck];
     }
 
+    /// @notice This function returns the *valid* stamps of an address at a specific timestamp
+    /// @param _toCheck The address to check
+    /// @param _timestamp The timestamp to check (seconds)
     function getStampsAt(
         address _toCheck,
         uint _timestamp
@@ -151,39 +146,38 @@ contract GithubVerification is SignatureHelper {
         Stamp[] memory stampsAt = new Stamp[](stamps[_toCheck].length);
         uint count = 0;
 
-        // Loop through stamps
+        // Loop through all the user's stamps
         for (uint i = 0; i < stamps[_toCheck].length; i++) {
-            uint64[] storage verifiedAt = stamps[_toCheck][i].verifiedAt;
-            uint currentTimestampIndex = thresholdHistory.length - 1;
 
+            // Get the list of all verification timestamps
+            uint64[] storage verifiedAt = stamps[_toCheck][i].verifiedAt;
+
+            // // Get the threshold at _timestamp
+            uint currentTimestampIndex = thresholdHistory.length - 1;
+            while (currentTimestampIndex > 0 && thresholdHistory[currentTimestampIndex].timestamp > _timestamp) {
+                currentTimestampIndex--;
+            }
+
+            uint64 verifyDayThreshold = thresholdHistory[currentTimestampIndex].threshold;
+            assert(verifyDayThreshold == 60);
+
+            bool found = false;
             // Reverse for loop, because more recent dates are at the end of the array
             for (uint j = verifiedAt.length; j > 0; j--) {
-                while (
-                    currentTimestampIndex > 0 &&
-                    verifiedAt[j - 1] <
-                    thresholdHistory[currentTimestampIndex].threshold
-                ) {
-                    currentTimestampIndex--;
-                }
+                // require(j - 1 == 1, "j==1");
+                // !(verifiedAt[j - 1] + verifyDayThreshold * 1 days > uint64(_timestamp))) {
+                //     revert Bababooey(uint64(_timestamp));
+                // } 
 
-                uint64 verifyDayThreshold = thresholdHistory[
-                    currentTimestampIndex
-                ].threshold;
-
-                // Check if the verification timestamp is within the verifyDayThreshold
-                if (
-                    verifiedAt[j - 1] + (verifyDayThreshold * 1 days) >
-                    _timestamp &&
-                    verifiedAt[j - 1] < _timestamp
-                ) {
-                    stampsAt[count] = stamps[_toCheck][i];
-                    count++;
-                    break;
-                } else if (
-                    verifiedAt[j - 1] + (verifyDayThreshold * 1 days) <
-                    _timestamp
-                ) {
-                    break;
+                // If the stamp is valid at _timestamp, add it to the stampsAt array
+                if (verifiedAt[j - 1] + (verifyDayThreshold * 1 days) > _timestamp && verifiedAt[j - 1] < _timestamp) {
+                    if (!found) {
+                        stampsAt[count] = stamps[_toCheck][i];
+                        count++;
+                        found = true;
+                    }
+                } else if (verifiedAt[j - 1] + (verifyDayThreshold * 1 days) < _timestamp) {
+                    found = true;
                 }
             }
         }
@@ -218,6 +212,14 @@ contract GithubVerification is SignatureHelper {
         return thresholdHistory;
     }
 
+    /// @notice This function can only be called by the owner to set the reverifyThreshold
+    /// @dev Sets the reverifyThreshold
+    /// @param _days The number of days to set the reverifyThreshold to
+    function setReverifyThreshold(uint64 _days) external onlyOwner {
+        reverifyThreshold = _days;
+    }
+
+    /// @notice This modifier makes it so that only the owner can call a function
     modifier onlyOwner() {
         require(msg.sender == _owner, "Ownable: caller is not the owner");
         _;
