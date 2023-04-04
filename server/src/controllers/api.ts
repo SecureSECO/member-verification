@@ -9,6 +9,8 @@ import crypto from "crypto";
 import createKeccakHash from "keccak";
 import { createPublicClient, http } from "viem";
 import { mainnet } from "viem/chains";
+import { mnemonicToSeed } from "bip39";
+import hdkey from "hdkey";
 
 // const transport = http(
 //     config.NODE_ENV === "development" ? "http://127.0.0.1:65534" : "...",
@@ -26,7 +28,6 @@ const web3provider = new Web3(
 );
 
 const account = config.PUBLIC_KEY;
-const key = config.PRIVATE_KEY;
 
 // const abi = abiObj.abi;
 // const contractAddress = config.CONTRACT_ADDRESS;
@@ -36,6 +37,20 @@ export const index = async (req: Request, res: Response): Promise<void> => {
     res.json({
         message: "OK",
     });
+};
+
+const getPrivateKey = async () => {
+    if (config.NODE_ENV === "production") {
+        return config.PRIVATE_KEY;
+    } else {
+        const hdkDerivePath = "m/44'/60'/0'/0/0";
+        const seed = await mnemonicToSeed(config.DEV_MNEMONIC);
+        const hdk = hdkey.fromMasterSeed(seed);
+        const addr_node = hdk.derive(hdkDerivePath); // gets first account
+        const private_key = addr_node.privateKey;
+
+        return private_key.toString("hex");
+    }
 };
 
 type ProviderID = "github" | "proofofhumanity";
@@ -61,7 +76,7 @@ const getVerificationData = async (
                 .update(id + providerId + config.HASH_SECRET)
                 .digest("hex");
 
-            const proof = generateProof(address, hash);
+            const proof = await generateProof(address, hash);
 
             resolve(proof);
         } catch (error) {
@@ -70,7 +85,10 @@ const getVerificationData = async (
     });
 };
 
-const generateProof = (address: string, hash: string): VerificationData => {
+const generateProof = async (
+    address: string,
+    hash: string,
+): Promise<VerificationData> => {
     const timestamp = Math.floor(Date.now() / 1000);
     const hashedMessage = web3provider.utils.soliditySha3(
         web3provider.utils.encodePacked(
@@ -89,6 +107,7 @@ const generateProof = (address: string, hash: string): VerificationData => {
         ),
     );
 
+    const key = await getPrivateKey();
     const signedData = web3provider.eth.accounts.sign(hashedMessage, key);
 
     const sig = signedData.signature;
@@ -251,7 +270,7 @@ export const proofOfHumanityUrl = async (address: string): Promise<string> => {
         args: [address],
     });
 
-    if (r === false) {
+    if (r === true) {
         const verificationData = await getVerificationData(
             address,
             address,
@@ -259,7 +278,7 @@ export const proofOfHumanityUrl = async (address: string): Promise<string> => {
         );
 
         return (
-            `${config.FRONTEND_URL}/verify?address=${address}` +
+            `${config.FRONTEND_URL}/verification/finish?address=${address}` +
             `&hash=${verificationData.hash}&timestamp=${verificationData.timestamp}` +
             `&sig=${verificationData.sig}&providerId=proofofhumanity`
         );
