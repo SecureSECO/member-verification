@@ -39,6 +39,10 @@ jobs:
     # - run: npm test --passWithNoTests
     - name: Install truffle
       run: npm install truffle -g
+    - name: Install and run Ganache
+      run: |
+        npm install ganache
+        ganache -p=65534 -m="lonely initial gold insect blue path episode kingdom fame execute ranch velvet" -D
     - name: Run truffle tests
       run: truffle test --bail
       
