@@ -114,7 +114,7 @@ contract("GithubVerification", async (accounts) => {
       } catch (error) {
         assert(
           error.message.includes("ID already affiliated with another address"),
-          "Error message is not correct: " + error.message,
+          "Error message is not correct"
         );
         return;
       }
