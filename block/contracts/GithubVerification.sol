@@ -86,10 +86,14 @@ contract GithubVerification is SignatureHelper {
 
         if (!found) {
             // Create new stamp if user does not already have a stamp for this providerId
-            stamps[_toVerify].push(createStamp(_providerId, _userHash, _timestamp));
-        } else { // If user already has a stamp for this providerId
+            stamps[_toVerify].push(
+                createStamp(_providerId, _userHash, _timestamp)
+            );
+        } else {
+            // If user already has a stamp for this providerId
             // Check how long it has been since the last verification
-            uint64[] storage verifiedAt = stamps[_toVerify][foundIndex].verifiedAt;
+            uint64[] storage verifiedAt = stamps[_toVerify][foundIndex]
+                .verifiedAt;
             uint64 timeSinceLastVerification = uint64(block.timestamp) -
                 verifiedAt[verifiedAt.length - 1];
 
@@ -186,15 +190,26 @@ contract GithubVerification is SignatureHelper {
 
         return stampsAtTrimmed;
     }
-    
+
     /// @notice This function can only be called by the owner to set the verifyDayThreshold
     /// @dev Sets the verifyDayThreshold
     /// @param _days The number of days to set the verifyDayThreshold to
     function setVerifyDayThreshold(uint64 _days) external onlyOwner {
-        Threshold memory lastThreshold = thresholdHistory[thresholdHistory.length - 1];
-        require(lastThreshold.threshold != _days, "Threshold already set to this value");
-        
+        Threshold memory lastThreshold = thresholdHistory[
+            thresholdHistory.length - 1
+        ];
+        require(
+            lastThreshold.threshold != _days,
+            "Threshold already set to this value"
+        );
+
         thresholdHistory.push(Threshold(uint64(block.timestamp), _days));
+    }
+
+    /// @notice This function returns the full threshold history
+    /// @return An array of Threshold structs
+    function getThresholdHistory() external view returns (Threshold[] memory) {
+        return thresholdHistory;
     }
 
     /// @notice This function can only be called by the owner to set the reverifyThreshold

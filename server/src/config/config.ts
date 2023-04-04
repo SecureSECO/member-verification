@@ -14,6 +14,7 @@ interface ENV {
     CONTRACT_ADDRESS: string | undefined;
     HASH_SECRET: string | undefined;
     FRONTEND_URL: string | undefined;
+    DEV_MNEMONIC: string | undefined;
 }
 
 interface Config {
@@ -25,6 +26,7 @@ interface Config {
     CONTRACT_ADDRESS: string;
     HASH_SECRET: string;
     FRONTEND_URL: string;
+    DEV_MNEMONIC: string;
 }
 
 const getConfig = (): ENV => {
@@ -37,6 +39,7 @@ const getConfig = (): ENV => {
         CONTRACT_ADDRESS: process.env.CONTRACT_ADDRESS,
         HASH_SECRET: process.env.HASH_SECRET,
         FRONTEND_URL: process.env.FRONTEND_URL,
+        DEV_MNEMONIC: process.env.DEV_MNEMONIC,
     };
 };
 
