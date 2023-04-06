@@ -3,8 +3,6 @@ pragma solidity ^0.8.0;
 
 import "./SignatureHelper.sol";
 
-error Bababooey(uint64 verifiedAt);
-
 /// @title A contract to verify addresses
 /// @author JSC LEE
 /// @notice You can use this contract to verify addresses
@@ -18,7 +16,7 @@ contract GithubVerification is SignatureHelper {
     Threshold[] thresholdHistory;
 
     /// @notice The reverifyThreshold determines how long a user has to wait before they can re-verify their address, in days
-    uint64 reverifyThreshold;
+    uint64 public reverifyThreshold;
 
     /// @notice Owner of the contract, can call specific functions to manage variables like the reverifyThreshold
     address private immutable _owner;
@@ -37,7 +35,7 @@ contract GithubVerification is SignatureHelper {
     }
 
     /// @notice This constructor sets the owner of the contract
-    constructor (uint64 _threshold, uint64 _reverifyThreshold) {
+    constructor(uint64 _threshold, uint64 _reverifyThreshold) {
         thresholdHistory.push(Threshold(uint64(block.timestamp), _threshold));
         reverifyThreshold = _reverifyThreshold;
         _owner = msg.sender;
@@ -174,26 +172,36 @@ contract GithubVerification is SignatureHelper {
 
         // Loop through all the user's stamps
         for (uint i = 0; i < stamps[_toCheck].length; i++) {
-
             // Get the list of all verification timestamps
             uint64[] storage verifiedAt = stamps[_toCheck][i].verifiedAt;
 
             // // Get the threshold at _timestamp
             uint currentTimestampIndex = thresholdHistory.length - 1;
-            while (currentTimestampIndex > 0 && thresholdHistory[currentTimestampIndex].timestamp > _timestamp) {
+            while (
+                currentTimestampIndex > 0 &&
+                thresholdHistory[currentTimestampIndex].timestamp > _timestamp
+            ) {
                 currentTimestampIndex--;
             }
 
-            uint64 verifyDayThreshold = thresholdHistory[currentTimestampIndex].threshold;
+            uint64 verifyDayThreshold = thresholdHistory[currentTimestampIndex]
+                .threshold;
 
             // Reverse for loop, because more recent dates are at the end of the array
             for (uint j = verifiedAt.length; j > 0; j--) {
                 // If the stamp is valid at _timestamp, add it to the stampsAt array
-                if (verifiedAt[j - 1] + (verifyDayThreshold * 1 days) > _timestamp && verifiedAt[j - 1] < _timestamp) {
+                if (
+                    verifiedAt[j - 1] + (verifyDayThreshold * 1 days) >
+                    _timestamp &&
+                    verifiedAt[j - 1] < _timestamp
+                ) {
                     stampsAt[count] = stamps[_toCheck][i];
                     count++;
                     break;
-                } else if (verifiedAt[j - 1] + (verifyDayThreshold * 1 days) < _timestamp) {
+                } else if (
+                    verifiedAt[j - 1] + (verifyDayThreshold * 1 days) <
+                    _timestamp
+                ) {
                     break;
                 }
             }
