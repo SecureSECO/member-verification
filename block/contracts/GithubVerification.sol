@@ -11,6 +11,7 @@ contract GithubVerification is SignatureHelper {
     mapping(address => Stamp[]) internal stamps;
     // Map from userhash to address to make sure the userhash isn't already used by another address
     mapping(string => address) internal stampHashMap;
+    address[] allMembers;
 
     /// @notice The thresholdHistory array stores the history of the verifyDayThreshold variable. This is needed because we might want to check if some stamps were valid in the past.
     Threshold[] thresholdHistory;
@@ -85,10 +86,18 @@ contract GithubVerification is SignatureHelper {
         }
 
         if (!found) {
+            // Check if this is the first time this user has verified so we can add them to the allMembers list
+            if (stamps[_toVerify].length == 0) {
+                allMembers.push(_toVerify);
+            }
+
             // Create new stamp if user does not already have a stamp for this providerId
             stamps[_toVerify].push(
                 createStamp(_providerId, _userHash, _timestamp)
             );
+
+            // This only needs to happens once (namely the first time an account verifies)
+            stampHashMap[_userHash] = _toVerify;
         } else {
             // If user already has a stamp for this providerId
             // Check how long it has been since the last verification
@@ -106,8 +115,6 @@ contract GithubVerification is SignatureHelper {
                 );
             }
         }
-
-        stampHashMap[_userHash] = _toVerify;
     }
 
     function unverify(string calldata _providerId) external {
@@ -235,6 +242,10 @@ contract GithubVerification is SignatureHelper {
     /// @return An array of Threshold structs
     function getThresholdHistory() external view returns (Threshold[] memory) {
         return thresholdHistory;
+    }
+
+    function getAllMembers() external view returns (address[] memory) {
+        return allMembers;
     }
 
     /// @notice This function can only be called by the owner to set the reverifyThreshold
