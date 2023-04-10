@@ -3,15 +3,19 @@
 This repository contains the source code for the SecureSECO Verification Suite, a tool to verify the identity of users and have that data be available on-chain.
 
 ## Components
+
 This project consists of three components:
 
 ### Block
+
 ...
 
 ### Server
+
 ...
 
 ### Web
+
 ...
 
 ## Installation
@@ -45,8 +49,9 @@ cd web
 npm install
 ```
 
-3. Start Ganache: 
-- Open Ganache and create a new workspace. 
+3. Start Ganache:
+
+- Open Ganache and create a new workspace.
 - Import the `block/truffle-config.js` file by pressing the "Add Project" button (Workspace tab)
 - Change the port number to 65534 (Server tab)
 - Optionally: Set the mnemonic
@@ -60,6 +65,7 @@ truffle migrate
 ```
 
 5. Create .env files
+
 - Create a `.env` file in the `server/src/config` folder and add the required fields (see the example.env file)
 - Create a `.env` file in the `web` folder and add the required fields (see the example.env file)
 
@@ -76,3 +82,7 @@ npm start
 cd web
 npm start
 ```
+
+### License
+
+This repository is [MIT licensed](./LICENSE).
