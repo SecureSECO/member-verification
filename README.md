@@ -76,3 +76,7 @@ npm start
 cd web
 npm start
 ```
+
+### License
+
+This repository is [MIT licensed](./LICENSE).
