@@ -34,23 +34,26 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
+          cache: 'npm'
 
-      - name: Cache npm dependencies
-        uses: actions/cache@v3
-        id: cache-npm-deps
-        with:
-          path: '~/.npm'
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+      # - name: Cache npm dependencies
+      #   uses: actions/cache@v3
+      #   id: cache-npm-deps
+      #   env:
+      #     cache-name: cache-npm-deps
+      #   with:
+      #     path: '~/.npm'
+      #     key: ${{ runner.os }}-node-${{ env.cache-name }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-node-
 
       - name: Run npm install
-        if: steps.cache-npm-deps.outputs.cache-hit != 'true'
+        # if: steps.cache-npm-deps.outputs.cache-hit != 'true'
         run: npm ci
       # - run: npm run build --if-present
       # - run: npm test --passWithNoTests
       - name: Install global dependencies
-        if: steps.cache-npm-deps.outputs.cache-hit != 'true'
+        # if: steps.cache-npm-deps.outputs.cache-hit != 'true'
         run: npm -g install truffle ganache
       - name: Run Ganache
         run: |
