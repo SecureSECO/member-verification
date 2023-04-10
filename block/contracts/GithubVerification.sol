@@ -108,6 +108,8 @@ contract GithubVerification is SignatureHelper {
 
             // If it has been more than reverifyThreshold days, update the stamp
             if (timeSinceLastVerification > reverifyThreshold) {
+                // Overwrite the userHash (in case the user changed their username or used another account to reverify)
+                stamps[_toVerify][foundIndex].userHash = _userHash;
                 verifiedAt.push(_timestamp);
             } else {
                 revert(
