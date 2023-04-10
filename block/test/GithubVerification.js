@@ -485,4 +485,20 @@ contract("GithubVerification", async (accounts) => {
       }, "Could not find this provider amongst your stamps; are you sure you're verified with this provider?");
     });
   });
+
+  context("List of all members test", async () => {
+    it("should add an account to list of all members after verification", async () => {
+        // Alice's verification with userhash (this should succeed)
+        await contractInstance.verifyAddress(
+          alice,
+          userHash,
+          timestamp,
+          "github",
+          signature
+        );
+
+        const allMembers = await contractInstance.getAllMembers();
+        assert(allMembers.length == 1 && allMembers[0] == alice);
+    });
+  });
 });
