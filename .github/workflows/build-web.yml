@@ -29,21 +29,30 @@ jobs:
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
     name: Build using Node ${{ matrix.node-version }}
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup node
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-    - name: Run npm install
-      run: npm ci
-    # - run: npm run build --if-present
-    # - run: npm test --passWithNoTests
-    - name: Install truffle
-      run: npm install truffle -g
-    - name: Install and run Ganache
-      run: |
-        npm install ganache -g
-        ganache -p=65534 -m="lonely initial gold insect blue path episode kingdom fame execute ranch velvet" -D
-    - name: Run truffle tests
-      run: truffle test
+      - uses: actions/checkout@v3
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v2
+        with:
+          path: '~/.npm'
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Run npm install
+        run: npm ci
+      # - run: npm run build --if-present
+      # - run: npm test --passWithNoTests
+      - name: Install truffle
+        run: npm install truffle -g
+      - name: Install and run Ganache
+        run: |
+          npm install ganache -g
+          ganache -p=65534 -m="lonely initial gold insect blue path episode kingdom fame execute ranch velvet" -D
+      - name: Run truffle tests
+        run: truffle test
       
