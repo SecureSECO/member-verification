@@ -1,10 +1,10 @@
 /**
-  * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
-  * © Copyright Utrecht University (Department of Information and Computing Sciences)
-  *
-  * This source code is licensed under the MIT license found in the
-  * LICENSE file in the root directory of this source tree.
-  */
+ * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
+ * © Copyright Utrecht University (Department of Information and Computing Sciences)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 import { Request, Response } from "express";
 import config from "../config/config";
@@ -132,8 +132,7 @@ const generateProof = async (
 };
 
 /// GITHUB OAUTH
-const REDIRECT_URI =
-    "https://securesecoverification2.loca.lt/api/github_callback";
+const REDIRECT_URI = "http://localhost:43210/api/github_callback";
 
 export const authorize = async (req: Request, res: Response): Promise<void> => {
     try {
