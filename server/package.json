@@ -1,7 +1,7 @@
 {
     "name": "securesecoverificationserver",
     "version": "1.2.0",
-    "description": "SecureSeCo Verification Server",
+    "description": "SecureSECO Verification Server",
     "main": "server.js",
     "scripts": {
         "start": "npm run serve",
