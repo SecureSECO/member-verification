@@ -1,30 +1,36 @@
 // SPDX-License-Identifier: MIT
+/**
+  * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
+  * © Copyright Utrecht University (Department of Information and Computing Sciences)
+  */
+
 pragma solidity ^0.8.0;
 
 import "./SignatureHelper.sol";
-
-error Bababooey(uint64 verifiedAt);
 
 /// @title A contract to verify addresses
 /// @author JSC LEE
 /// @notice You can use this contract to verify addresses
 contract GithubVerification is SignatureHelper {
+    // Map from user to their stamps
     mapping(address => Stamp[]) internal stamps;
+    // Map from userhash to address to make sure the userhash isn't already used by another address
     mapping(string => address) internal stampHashMap;
+    address[] allMembers;
 
     /// @notice The thresholdHistory array stores the history of the verifyDayThreshold variable. This is needed because we might want to check if some stamps were valid in the past.
     Threshold[] thresholdHistory;
 
     /// @notice The reverifyThreshold determines how long a user has to wait before they can re-verify their address, in days
-    uint64 reverifyThreshold;
+    uint64 public reverifyThreshold;
 
     /// @notice Owner of the contract, can call specific functions to manage variables like the reverifyThreshold
     address private immutable _owner;
 
     /// @notice A stamp defines proof of verification for a user on a specific platform at a specific date
     struct Stamp {
-        string id; // Unique id for the provider (github, proofofhumanity, etc.)
-        string _hash; // Hash of some unique user data of the provider (username, email, etc.)
+        string providerId; // Unique id for the provider (github, proofofhumanity, etc.)
+        string userHash; // Hash of some unique user data of the provider (username, email, etc.)
         uint64[] verifiedAt; // Timestamps at which the user has verified
     }
 
@@ -35,7 +41,7 @@ contract GithubVerification is SignatureHelper {
     }
 
     /// @notice This constructor sets the owner of the contract
-    constructor (uint64 _threshold, uint64 _reverifyThreshold) {
+    constructor(uint64 _threshold, uint64 _reverifyThreshold) {
         thresholdHistory.push(Threshold(uint64(block.timestamp), _threshold));
         reverifyThreshold = _reverifyThreshold;
         _owner = msg.sender;
@@ -75,7 +81,7 @@ contract GithubVerification is SignatureHelper {
 
         for (uint i = 0; i < stamps[_toVerify].length; i++) {
             if (
-                keccak256(abi.encodePacked(stamps[_toVerify][i].id)) ==
+                keccak256(abi.encodePacked(stamps[_toVerify][i].providerId)) ==
                 keccak256(abi.encodePacked(_providerId))
             ) {
                 found = true;
@@ -85,10 +91,18 @@ contract GithubVerification is SignatureHelper {
         }
 
         if (!found) {
+            // Check if this is the first time this user has verified so we can add them to the allMembers list
+            if (stamps[_toVerify].length == 0) {
+                allMembers.push(_toVerify);
+            }
+
             // Create new stamp if user does not already have a stamp for this providerId
             stamps[_toVerify].push(
                 createStamp(_providerId, _userHash, _timestamp)
             );
+
+            // This only needs to happens once (namely the first time an account verifies)
+            stampHashMap[_userHash] = _toVerify;
         } else {
             // If user already has a stamp for this providerId
             // Check how long it has been since the last verification
@@ -99,6 +113,8 @@ contract GithubVerification is SignatureHelper {
 
             // If it has been more than reverifyThreshold days, update the stamp
             if (timeSinceLastVerification > reverifyThreshold) {
+                // Overwrite the userHash (in case the user changed their username or used another account to reverify)
+                stamps[_toVerify][foundIndex].userHash = _userHash;
                 verifiedAt.push(_timestamp);
             } else {
                 revert(
@@ -106,8 +122,30 @@ contract GithubVerification is SignatureHelper {
                 );
             }
         }
+    }
 
-        stampHashMap[_userHash] = _toVerify;
+    function unverify(string calldata _providerId) external {
+        // Assume all is good in the world
+        Stamp[] storage stampsAt = stamps[msg.sender];
+
+        // Look up the corresponding stamp for the provider
+        for (uint8 i = 0; i < stampsAt.length; i++) {
+            if (stringsAreEqual(stampsAt[i].providerId, _providerId)) {
+                // Remove the mapping from userhash to address
+                stampHashMap[stampsAt[i].userHash] = address(0);
+
+                // Remove stamp from stamps array (we don't care about order so we can just swap and pop)
+                stampsAt[i] = stampsAt[stampsAt.length - 1];
+                stampsAt.pop();
+                return;
+            }
+        }
+
+        revert("Could not find this provider amongst your stamps; are you sure you're verified with this provider?");
+    }
+
+    function stringsAreEqual(string memory str1, string memory str2) public pure returns (bool) {
+        return keccak256(abi.encodePacked(str1)) == keccak256(abi.encodePacked(str2));
     }
 
     /// @notice Creates a stamp for a user
@@ -148,26 +186,36 @@ contract GithubVerification is SignatureHelper {
 
         // Loop through all the user's stamps
         for (uint i = 0; i < stamps[_toCheck].length; i++) {
-
             // Get the list of all verification timestamps
             uint64[] storage verifiedAt = stamps[_toCheck][i].verifiedAt;
 
             // // Get the threshold at _timestamp
             uint currentTimestampIndex = thresholdHistory.length - 1;
-            while (currentTimestampIndex > 0 && thresholdHistory[currentTimestampIndex].timestamp > _timestamp) {
+            while (
+                currentTimestampIndex > 0 &&
+                thresholdHistory[currentTimestampIndex].timestamp > _timestamp
+            ) {
                 currentTimestampIndex--;
             }
 
-            uint64 verifyDayThreshold = thresholdHistory[currentTimestampIndex].threshold;
+            uint64 verifyDayThreshold = thresholdHistory[currentTimestampIndex]
+                .threshold;
 
             // Reverse for loop, because more recent dates are at the end of the array
             for (uint j = verifiedAt.length; j > 0; j--) {
                 // If the stamp is valid at _timestamp, add it to the stampsAt array
-                if (verifiedAt[j - 1] + (verifyDayThreshold * 1 days) > _timestamp && verifiedAt[j - 1] < _timestamp) {
+                if (
+                    verifiedAt[j - 1] + (verifyDayThreshold * 1 days) >
+                    _timestamp &&
+                    verifiedAt[j - 1] < _timestamp
+                ) {
                     stampsAt[count] = stamps[_toCheck][i];
                     count++;
                     break;
-                } else if (verifiedAt[j - 1] + (verifyDayThreshold * 1 days) < _timestamp) {
+                } else if (
+                    verifiedAt[j - 1] + (verifyDayThreshold * 1 days) <
+                    _timestamp
+                ) {
                     break;
                 }
             }
@@ -201,6 +249,10 @@ contract GithubVerification is SignatureHelper {
     /// @return An array of Threshold structs
     function getThresholdHistory() external view returns (Threshold[] memory) {
         return thresholdHistory;
+    }
+
+    function getAllMembers() external view returns (address[] memory) {
+        return allMembers;
     }
 
     /// @notice This function can only be called by the owner to set the reverifyThreshold
