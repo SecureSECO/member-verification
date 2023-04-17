@@ -1,10 +1,10 @@
 /**
-  * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
-  * © Copyright Utrecht University (Department of Information and Computing Sciences)
-  *
-  * This source code is licensed under the MIT license found in the
-  * LICENSE file in the root directory of this source tree.
-  */
+ * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
+ * © Copyright Utrecht University (Department of Information and Computing Sciences)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 // TODO: write separate getStamps function to avoid duplicate code
 const GithubVerification = artifacts.require("GithubVerification");
@@ -438,6 +438,53 @@ contract("GithubVerification", async (accounts) => {
         );
       });
     });
+
+    it("Should be able to change the reverification time", async () => {
+      await snapshotHelper(async () => {
+        // Set reverify day threshold to half of what it was before
+        await contractInstance.setReverifyThreshold(
+          REVERIFY_DAY_THRESHOLD / 2,
+          {
+            from: owner,
+          }
+        );
+
+        // Manually increase the time on the blockchain by REVERIFICATION_DAY_THRESHOLD / 2 days
+        await time.increase((REVERIFY_DAY_THRESHOLD / 2) * 24 * 60 * 60); // Time in seconds
+
+        // New timestamp REVERIFICATION_DAY_THRESHOLD * 2 days from now (which should match the current blockchain time)
+        const newTimestamp = Math.floor(
+          (new Date().getTime() +
+            (REVERIFY_DAY_THRESHOLD / 2) * 24 * 60 * 60 * 1000) /
+            1000
+        );
+
+        const { signature: newSignature } = await createSignature(
+          newTimestamp,
+          alice,
+          ownerPrivKey
+        );
+
+        /*
+         * Alice's second verification after verificationDayThreshold was halved, this should succeed
+         */
+        await contractInstance.verifyAddress(
+          alice,
+          userHash,
+          newTimestamp,
+          "github",
+          newSignature
+        );
+
+        // Check if reverification successfully updated the timestamp on Alice's GitHub stamp
+        stamps = await contractInstance.getStamps(alice);
+        assert(stamps.length === 1, "Length of stamps array is not equal to 1");
+        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][1] === userHash, "Userhashes not equal");
+        assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
+        assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
+      });
+    });
   });
 
   context("Unverification tests", async () => {
@@ -496,17 +543,17 @@ contract("GithubVerification", async (accounts) => {
 
   context("List of all members test", async () => {
     it("should add an account to list of all members after verification", async () => {
-        // Alice's verification with userhash (this should succeed)
-        await contractInstance.verifyAddress(
-          alice,
-          userHash,
-          timestamp,
-          "github",
-          signature
-        );
+      // Alice's verification with userhash (this should succeed)
+      await contractInstance.verifyAddress(
+        alice,
+        userHash,
+        timestamp,
+        "github",
+        signature
+      );
 
-        const allMembers = await contractInstance.getAllMembers();
-        assert(allMembers.length == 1 && allMembers[0] == alice);
+      const allMembers = await contractInstance.getAllMembers();
+      assert(allMembers.length == 1 && allMembers[0] == alice);
     });
   });
 });
