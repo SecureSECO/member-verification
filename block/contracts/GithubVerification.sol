@@ -73,10 +73,10 @@ contract GithubVerification is SignatureHelper, Ownable {
         );
 
         // Check if there is existing stamp with providerId
-        bool found = false;
-        uint foundIndex = 0;
+        bool found; // = false;
+        uint foundIndex; // = 0;
 
-        for (uint i = 0; i < stamps[_toVerify].length; i++) {
+        for (uint i; i < stamps[_toVerify].length;) {
             if (
                 keccak256(abi.encodePacked(stamps[_toVerify][i].providerId)) ==
                 keccak256(abi.encodePacked(_providerId))
@@ -84,6 +84,10 @@ contract GithubVerification is SignatureHelper, Ownable {
                 found = true;
                 foundIndex = i;
                 break;
+            }
+
+            unchecked {
+                i++;
             }
         }
 
@@ -128,7 +132,7 @@ contract GithubVerification is SignatureHelper, Ownable {
         Stamp[] storage stampsAt = stamps[msg.sender];
 
         // Look up the corresponding stamp for the provider
-        for (uint8 i = 0; i < stampsAt.length; i++) {
+        for (uint i; i < stampsAt.length;) {
             if (stringsAreEqual(stampsAt[i].providerId, _providerId)) {
                 // Remove the mapping from userhash to address
                 stampHashMap[stampsAt[i].userHash] = address(0);
@@ -138,11 +142,16 @@ contract GithubVerification is SignatureHelper, Ownable {
                 stampsAt.pop();
                 return;
             }
+
+            unchecked {
+                i++;
+            }
         }
 
-        revert("Could not find this provider amongst your stamps; are you sure you're verified with this provider?");
+        revert("Could not find this provider among your stamps; are you sure you're verified with this provider?");
     }
 
+    /// @dev Solidity doesn't support string comparison, so we use keccak256 to compare strings
     function stringsAreEqual(string memory str1, string memory str2) public pure returns (bool) {
         return keccak256(abi.encodePacked(str1)) == keccak256(abi.encodePacked(str2));
     }
@@ -181,14 +190,14 @@ contract GithubVerification is SignatureHelper, Ownable {
         uint _timestamp
     ) external view returns (Stamp[] memory) {
         Stamp[] memory stampsAt = new Stamp[](stamps[_toCheck].length);
-        uint count = 0;
+        uint count; // = 0;
 
         // Loop through all the user's stamps
-        for (uint i = 0; i < stamps[_toCheck].length; i++) {
+        for (uint i; i < stamps[_toCheck].length;) {
             // Get the list of all verification timestamps
             uint64[] storage verifiedAt = stamps[_toCheck][i].verifiedAt;
 
-            // // Get the threshold at _timestamp
+            // Get the threshold at _timestamp
             uint currentTimestampIndex = thresholdHistory.length - 1;
             while (
                 currentTimestampIndex > 0 &&
@@ -217,6 +226,10 @@ contract GithubVerification is SignatureHelper, Ownable {
                 ) {
                     break;
                 }
+            }
+
+            unchecked {
+                i++;
             }
         }
 
@@ -259,10 +272,14 @@ contract GithubVerification is SignatureHelper, Ownable {
     /// @return bool Whether or not the caller is or was a member at any time
     function isOrWasMember() external view returns (bool) {
         // Loop through the member array
-        for (uint i = 0; i < allMembers.length; i++) {
+        for (uint i; i < allMembers.length;) {
             // If the member is found, return true
             if (allMembers[i] == msg.sender) {
                 return true;
+            }
+
+            unchecked {
+                i++;
             }
         }
         return false;

@@ -520,7 +520,7 @@ contract("GithubVerification", async (accounts) => {
         await contractInstance.unverify("github", {
           from: alice,
         });
-      }, "Could not find this provider amongst your stamps; are you sure you're verified with this provider?");
+      }, "Could not find this provider among your stamps; are you sure you're verified with this provider?");
     });
 
     it("should not be able to unverify for an unknown/unowned provider", async () => {
@@ -537,7 +537,7 @@ contract("GithubVerification", async (accounts) => {
         await contractInstance.unverify("notARealProvider", {
           from: alice,
         });
-      }, "Could not find this provider amongst your stamps; are you sure you're verified with this provider?");
+      }, "Could not find this provider among your stamps; are you sure you're verified with this provider?");
     });
   });
 
