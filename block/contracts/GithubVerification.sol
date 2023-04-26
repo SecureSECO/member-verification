@@ -7,11 +7,12 @@
 pragma solidity ^0.8.0;
 
 import "./SignatureHelper.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title A contract to verify addresses
 /// @author JSC LEE
 /// @notice You can use this contract to verify addresses
-contract GithubVerification is SignatureHelper {
+contract GithubVerification is SignatureHelper, Ownable {
     // Map from user to their stamps
     mapping(address => Stamp[]) internal stamps;
     // Map from userhash to address to make sure the userhash isn't already used by another address
@@ -23,9 +24,6 @@ contract GithubVerification is SignatureHelper {
 
     /// @notice The reverifyThreshold determines how long a user has to wait before they can re-verify their address, in days
     uint64 public reverifyThreshold;
-
-    /// @notice Owner of the contract, can call specific functions to manage variables like the reverifyThreshold
-    address private immutable _owner;
 
     /// @notice A stamp defines proof of verification for a user on a specific platform at a specific date
     struct Stamp {
@@ -40,14 +38,13 @@ contract GithubVerification is SignatureHelper {
         uint64 threshold; // Number of days for which a stamp is valid
     }
 
-    /// @notice This constructor sets the owner of the contract
+    /// @notice Initializes the owner of the contract
     constructor(uint64 _threshold, uint64 _reverifyThreshold) {
         thresholdHistory.push(Threshold(uint64(block.timestamp), _threshold));
         reverifyThreshold = _reverifyThreshold;
-        _owner = msg.sender;
     }
 
-    /// @notice This function can only be called by the owner, and it verifies an address. It's not possible to re-verofuy an address before half the verifyDayThreshold has passed.
+    /// @notice This function can only be called by the owner, and it verifies an address. It's not possible to re-verify an address before half the verifyDayThreshold has passed.
     /// @dev Verifies an address
     /// @param _toVerify The address to verify
     /// @param _timestamp in seconds
@@ -71,7 +68,7 @@ contract GithubVerification is SignatureHelper {
         );
 
         require(
-            verify(_owner, _toVerify, _userHash, _timestamp, _proofSignature),
+            verify(owner(), _toVerify, _userHash, _timestamp, _proofSignature),
             "Proof is not valid"
         );
 
@@ -124,6 +121,8 @@ contract GithubVerification is SignatureHelper {
         }
     }
 
+    /// @notice Unverifies a provider from the sender
+    /// @param _providerId Unique id for the provider (github, proofofhumanity, etc.) to be removed
     function unverify(string calldata _providerId) external {
         // Assume all is good in the world
         Stamp[] storage stampsAt = stamps[msg.sender];
@@ -174,7 +173,7 @@ contract GithubVerification is SignatureHelper {
         return stamps[_toCheck];
     }
 
-    /// @notice This function returns the *valid* stamps of an address at a specific timestamp
+    /// @notice Returns the *valid* stamps of an address at a specific timestamp
     /// @param _toCheck The address to check
     /// @param _timestamp The timestamp to check (seconds)
     function getStampsAt(
@@ -245,7 +244,7 @@ contract GithubVerification is SignatureHelper {
         thresholdHistory.push(Threshold(uint64(block.timestamp), _days));
     }
 
-    /// @notice This function returns the full threshold history
+    /// @notice Returns the full threshold history
     /// @return An array of Threshold structs
     function getThresholdHistory() external view returns (Threshold[] memory) {
         return thresholdHistory;
@@ -255,16 +254,24 @@ contract GithubVerification is SignatureHelper {
         return allMembers;
     }
 
+    /// @notice Returns whether or not the caller is or was a member at any time
+    /// @dev Loop through the array of all members and return true if the caller is found
+    /// @return bool Whether or not the caller is or was a member at any time
+    function isOrWasMember() external view returns (bool) {
+        // Loop through the member array
+        for (uint i = 0; i < allMembers.length; i++) {
+            // If the member is found, return true
+            if (allMembers[i] == msg.sender) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /// @notice This function can only be called by the owner to set the reverifyThreshold
     /// @dev Sets the reverifyThreshold
     /// @param _days The number of days to set the reverifyThreshold to
     function setReverifyThreshold(uint64 _days) external onlyOwner {
         reverifyThreshold = _days;
-    }
-
-    /// @notice This modifier makes it so that only the owner can call a function
-    modifier onlyOwner() {
-        require(msg.sender == _owner, "Ownable: caller is not the owner");
-        _;
     }
 }
