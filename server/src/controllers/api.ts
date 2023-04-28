@@ -256,7 +256,7 @@ export const githubCallback = async (
         // });
 
         res.redirect(
-            `${config.FRONTEND_URL}/verification/finish?address=${state}` +
+            `${config.FRONTEND_URL}/verification?new=true&address=${state}` +
                 `&hash=${verificationData.hash}&timestamp=${verificationData.timestamp}` +
                 `&sig=${verificationData.sig}&providerId=github`,
         );
@@ -285,7 +285,7 @@ export const proofOfHumanityUrl = async (address: string): Promise<string> => {
         );
 
         return (
-            `${config.FRONTEND_URL}/verification/finish?address=${address}` +
+            `${config.FRONTEND_URL}/verification?new=true&address=${address}` +
             `&hash=${verificationData.hash}&timestamp=${verificationData.timestamp}` +
             `&sig=${verificationData.sig}&providerId=proofofhumanity`
         );
