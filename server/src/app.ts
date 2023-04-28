@@ -39,4 +39,4 @@ app.use(errors());
 app.use(errorNotFoundHandler);
 app.use(errorHandler);
 
-console.log("ENVIROMENT: %s", app.get("env"));
+console.log("ENVIRONMENT: %s", app.get("env"));
