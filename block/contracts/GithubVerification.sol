@@ -7,11 +7,12 @@
 pragma solidity ^0.8.0;
 
 import "./SignatureHelper.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title A contract to verify addresses
 /// @author JSC LEE
 /// @notice You can use this contract to verify addresses
-contract GithubVerification is SignatureHelper {
+contract GithubVerification is SignatureHelper, Ownable {
     // Map from user to their stamps
     mapping(address => Stamp[]) internal stamps;
     // Map from userhash to address to make sure the userhash isn't already used by another address
@@ -23,9 +24,6 @@ contract GithubVerification is SignatureHelper {
 
     /// @notice The reverifyThreshold determines how long a user has to wait before they can re-verify their address, in days
     uint64 public reverifyThreshold;
-
-    /// @notice Owner of the contract, can call specific functions to manage variables like the reverifyThreshold
-    address private immutable _owner;
 
     /// @notice A stamp defines proof of verification for a user on a specific platform at a specific date
     struct Stamp {
@@ -40,14 +38,13 @@ contract GithubVerification is SignatureHelper {
         uint64 threshold; // Number of days for which a stamp is valid
     }
 
-    /// @notice This constructor sets the owner of the contract
+    /// @notice Initializes the owner of the contract
     constructor(uint64 _threshold, uint64 _reverifyThreshold) {
         thresholdHistory.push(Threshold(uint64(block.timestamp), _threshold));
         reverifyThreshold = _reverifyThreshold;
-        _owner = msg.sender;
     }
 
-    /// @notice This function can only be called by the owner, and it verifies an address. It's not possible to re-verofuy an address before half the verifyDayThreshold has passed.
+    /// @notice This function can only be called by the owner, and it verifies an address. It's not possible to re-verify an address before half the verifyDayThreshold has passed.
     /// @dev Verifies an address
     /// @param _toVerify The address to verify
     /// @param _timestamp in seconds
@@ -71,15 +68,15 @@ contract GithubVerification is SignatureHelper {
         );
 
         require(
-            verify(_owner, _toVerify, _userHash, _timestamp, _proofSignature),
+            verify(owner(), _toVerify, _userHash, _timestamp, _proofSignature),
             "Proof is not valid"
         );
 
         // Check if there is existing stamp with providerId
-        bool found = false;
-        uint foundIndex = 0;
+        bool found; // = false;
+        uint foundIndex; // = 0;
 
-        for (uint i = 0; i < stamps[_toVerify].length; i++) {
+        for (uint i; i < stamps[_toVerify].length;) {
             if (
                 keccak256(abi.encodePacked(stamps[_toVerify][i].providerId)) ==
                 keccak256(abi.encodePacked(_providerId))
@@ -87,6 +84,10 @@ contract GithubVerification is SignatureHelper {
                 found = true;
                 foundIndex = i;
                 break;
+            }
+
+            unchecked {
+                i++;
             }
         }
 
@@ -124,12 +125,14 @@ contract GithubVerification is SignatureHelper {
         }
     }
 
+    /// @notice Unverifies a provider from the sender
+    /// @param _providerId Unique id for the provider (github, proofofhumanity, etc.) to be removed
     function unverify(string calldata _providerId) external {
         // Assume all is good in the world
         Stamp[] storage stampsAt = stamps[msg.sender];
 
         // Look up the corresponding stamp for the provider
-        for (uint8 i = 0; i < stampsAt.length; i++) {
+        for (uint i; i < stampsAt.length;) {
             if (stringsAreEqual(stampsAt[i].providerId, _providerId)) {
                 // Remove the mapping from userhash to address
                 stampHashMap[stampsAt[i].userHash] = address(0);
@@ -139,11 +142,16 @@ contract GithubVerification is SignatureHelper {
                 stampsAt.pop();
                 return;
             }
+
+            unchecked {
+                i++;
+            }
         }
 
-        revert("Could not find this provider amongst your stamps; are you sure you're verified with this provider?");
+        revert("Could not find this provider among your stamps; are you sure you're verified with this provider?");
     }
 
+    /// @dev Solidity doesn't support string comparison, so we use keccak256 to compare strings
     function stringsAreEqual(string memory str1, string memory str2) public pure returns (bool) {
         return keccak256(abi.encodePacked(str1)) == keccak256(abi.encodePacked(str2));
     }
@@ -174,7 +182,7 @@ contract GithubVerification is SignatureHelper {
         return stamps[_toCheck];
     }
 
-    /// @notice This function returns the *valid* stamps of an address at a specific timestamp
+    /// @notice Returns the *valid* stamps of an address at a specific timestamp
     /// @param _toCheck The address to check
     /// @param _timestamp The timestamp to check (seconds)
     function getStampsAt(
@@ -182,14 +190,14 @@ contract GithubVerification is SignatureHelper {
         uint _timestamp
     ) external view returns (Stamp[] memory) {
         Stamp[] memory stampsAt = new Stamp[](stamps[_toCheck].length);
-        uint count = 0;
+        uint count; // = 0;
 
         // Loop through all the user's stamps
-        for (uint i = 0; i < stamps[_toCheck].length; i++) {
+        for (uint i; i < stamps[_toCheck].length;) {
             // Get the list of all verification timestamps
             uint64[] storage verifiedAt = stamps[_toCheck][i].verifiedAt;
 
-            // // Get the threshold at _timestamp
+            // Get the threshold at _timestamp
             uint currentTimestampIndex = thresholdHistory.length - 1;
             while (
                 currentTimestampIndex > 0 &&
@@ -219,6 +227,10 @@ contract GithubVerification is SignatureHelper {
                     break;
                 }
             }
+
+            unchecked {
+                i++;
+            }
         }
 
         Stamp[] memory stampsAtTrimmed = new Stamp[](count);
@@ -245,7 +257,7 @@ contract GithubVerification is SignatureHelper {
         thresholdHistory.push(Threshold(uint64(block.timestamp), _days));
     }
 
-    /// @notice This function returns the full threshold history
+    /// @notice Returns the full threshold history
     /// @return An array of Threshold structs
     function getThresholdHistory() external view returns (Threshold[] memory) {
         return thresholdHistory;
@@ -255,16 +267,28 @@ contract GithubVerification is SignatureHelper {
         return allMembers;
     }
 
+    /// @notice Returns whether or not the caller is or was a member at any time
+    /// @dev Loop through the array of all members and return true if the caller is found
+    /// @return bool Whether or not the caller is or was a member at any time
+    function isOrWasMember() external view returns (bool) {
+        // Loop through the member array
+        for (uint i; i < allMembers.length;) {
+            // If the member is found, return true
+            if (allMembers[i] == msg.sender) {
+                return true;
+            }
+
+            unchecked {
+                i++;
+            }
+        }
+        return false;
+    }
+
     /// @notice This function can only be called by the owner to set the reverifyThreshold
     /// @dev Sets the reverifyThreshold
     /// @param _days The number of days to set the reverifyThreshold to
     function setReverifyThreshold(uint64 _days) external onlyOwner {
         reverifyThreshold = _days;
-    }
-
-    /// @notice This modifier makes it so that only the owner can call a function
-    modifier onlyOwner() {
-        require(msg.sender == _owner, "Ownable: caller is not the owner");
-        _;
     }
 }
