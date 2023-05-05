@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@openzeppelin/contracts": "^4.8.2",
+    "@openzeppelin/contracts": "^4.8.3",
     "@openzeppelin/test-helpers": "^0.5.16",
     "bip39": "^3.1.0",
     "dotenv": "^16.0.3",
