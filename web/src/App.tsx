@@ -1,10 +1,10 @@
 /**
-  * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
-  * © Copyright Utrecht University (Department of Information and Computing Sciences)
-  *
-  * This source code is licensed under the MIT license found in the
-  * LICENSE file in the root directory of this source tree.
-  */
+ * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
+ * © Copyright Utrecht University (Department of Information and Computing Sciences)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 import React, { useEffect, useState } from "react";
 import "viem/window";
@@ -44,7 +44,6 @@ export const publicClient = createPublicClient({
 export const apiUrl = process.env.REACT_APP_API_URL;
 export const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
 
-// TODO: Move to a db or something
 export const availableStamps = ["proofofhumanity", "github", "twitter"];
 
 function App() {
@@ -52,11 +51,11 @@ function App() {
     <BrowserRouter>
       <Toaster />
       <header className="container mx-auto py-10">
-        <h1>SecureSECO Verification</h1>
+        <h1>Verification</h1>
       </header>
       <Routes>
         <Route path="/" element={<Main />} />
-        <Route path="/verification/finish" element={<Verify />} />
+        <Route path="/verification" element={<Verify />} />
       </Routes>
     </BrowserRouter>
   );

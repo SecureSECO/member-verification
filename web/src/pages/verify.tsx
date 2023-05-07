@@ -1,17 +1,17 @@
 /**
-  * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
-  * © Copyright Utrecht University (Department of Information and Computing Sciences)
-  *
-  * This source code is licensed under the MIT license found in the
-  * LICENSE file in the root directory of this source tree.
-  */
+ * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
+ * © Copyright Utrecht University (Department of Information and Computing Sciences)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useSearchParams } from "react-router-dom";
 import { Account, getAccount } from "viem";
 import { walletClient, publicClient, contractAddress } from "../App";
-import { GithubVerification } from "../GithubVerification";
+import { GithubVerificationAbi } from "../GithubVerification";
 
 const Verify = () => {
   const [searchParams] = useSearchParams();
@@ -47,7 +47,7 @@ const Verify = () => {
   const writeToContract = async () => {
     const { request } = await publicClient.simulateContract({
       address: contractAddress as any,
-      abi: GithubVerification.abi,
+      abi: GithubVerificationAbi,
       functionName: "verifyAddress",
       args: [address, hash, timestamp, providerId, sig],
       account,
@@ -97,7 +97,12 @@ const Verify = () => {
         <div>
           <p className="mb-6">Connected to {account.address}</p>
           {success ? (
-            <h2>Successfully verified! You can now close this window.</h2>
+            <div className="space-y-4">
+              <h2>Successfully verified!</h2>
+              <a href="/" className="underline">
+                Go back
+              </a>
+            </div>
           ) : (
             <button onClick={makeTransaction} disabled={disabled}>
               Click here to verify
