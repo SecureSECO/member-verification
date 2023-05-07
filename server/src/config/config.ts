@@ -1,10 +1,10 @@
 /**
-  * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
-  * © Copyright Utrecht University (Department of Information and Computing Sciences)
-  *
-  * This source code is licensed under the MIT license found in the
-  * LICENSE file in the root directory of this source tree.
-  */
+ * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
+ * © Copyright Utrecht University (Department of Information and Computing Sciences)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 // SOURCE: https://dev.to/asjadanis/parsing-env-with-typescript-3jjm
 
@@ -19,7 +19,6 @@ interface ENV {
     GITHUB_CLIENT_SECRET: string | undefined;
     PUBLIC_KEY: string | undefined;
     PRIVATE_KEY: string | undefined;
-    CONTRACT_ADDRESS: string | undefined;
     HASH_SECRET: string | undefined;
     FRONTEND_URL: string | undefined;
     DEV_MNEMONIC: string | undefined;
@@ -31,7 +30,6 @@ interface Config {
     GITHUB_CLIENT_SECRET: string;
     PUBLIC_KEY: string;
     PRIVATE_KEY: string;
-    CONTRACT_ADDRESS: string;
     HASH_SECRET: string;
     FRONTEND_URL: string;
     DEV_MNEMONIC: string;
@@ -44,7 +42,6 @@ const getConfig = (): ENV => {
         GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
         PUBLIC_KEY: process.env.PUBLIC_KEY,
         PRIVATE_KEY: process.env.PRIVATE_KEY,
-        CONTRACT_ADDRESS: process.env.CONTRACT_ADDRESS,
         HASH_SECRET: process.env.HASH_SECRET,
         FRONTEND_URL: process.env.FRONTEND_URL,
         DEV_MNEMONIC: process.env.DEV_MNEMONIC,
