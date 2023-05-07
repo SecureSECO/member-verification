@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 /**
-  * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
-  * © Copyright Utrecht University (Department of Information and Computing Sciences)
-  */
+ * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
+ * © Copyright Utrecht University (Department of Information and Computing Sciences)
+ */
 
 pragma solidity ^0.8.0;
 
@@ -10,7 +10,7 @@ import "./SignatureHelper.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title A contract to verify addresses
-/// @author JSC LEE
+/// @author Utrecht University
 /// @notice You can use this contract to verify addresses
 contract GithubVerification is SignatureHelper, Ownable {
     // Map from user to their stamps
@@ -76,7 +76,7 @@ contract GithubVerification is SignatureHelper, Ownable {
         bool found; // = false;
         uint foundIndex; // = 0;
 
-        for (uint i; i < stamps[_toVerify].length;) {
+        for (uint i; i < stamps[_toVerify].length; ) {
             if (
                 keccak256(abi.encodePacked(stamps[_toVerify][i].providerId)) ==
                 keccak256(abi.encodePacked(_providerId))
@@ -132,7 +132,7 @@ contract GithubVerification is SignatureHelper, Ownable {
         Stamp[] storage stampsAt = stamps[msg.sender];
 
         // Look up the corresponding stamp for the provider
-        for (uint i; i < stampsAt.length;) {
+        for (uint i; i < stampsAt.length; ) {
             if (stringsAreEqual(stampsAt[i].providerId, _providerId)) {
                 // Remove the mapping from userhash to address
                 stampHashMap[stampsAt[i].userHash] = address(0);
@@ -148,12 +148,19 @@ contract GithubVerification is SignatureHelper, Ownable {
             }
         }
 
-        revert("Could not find this provider among your stamps; are you sure you're verified with this provider?");
+        revert(
+            "Could not find this provider among your stamps; are you sure you're verified with this provider?"
+        );
     }
 
     /// @dev Solidity doesn't support string comparison, so we use keccak256 to compare strings
-    function stringsAreEqual(string memory str1, string memory str2) public pure returns (bool) {
-        return keccak256(abi.encodePacked(str1)) == keccak256(abi.encodePacked(str2));
+    function stringsAreEqual(
+        string memory str1,
+        string memory str2
+    ) public pure returns (bool) {
+        return
+            keccak256(abi.encodePacked(str1)) ==
+            keccak256(abi.encodePacked(str2));
     }
 
     /// @notice Creates a stamp for a user
@@ -193,7 +200,7 @@ contract GithubVerification is SignatureHelper, Ownable {
         uint count; // = 0;
 
         // Loop through all the user's stamps
-        for (uint i; i < stamps[_toCheck].length;) {
+        for (uint i; i < stamps[_toCheck].length; ) {
             // Get the list of all verification timestamps
             uint64[] storage verifiedAt = stamps[_toCheck][i].verifiedAt;
 
@@ -272,7 +279,7 @@ contract GithubVerification is SignatureHelper, Ownable {
     /// @return bool Whether or not the caller is or was a member at any time
     function isOrWasMember() external view returns (bool) {
         // Loop through the member array
-        for (uint i; i < allMembers.length;) {
+        for (uint i; i < allMembers.length; ) {
             // If the member is found, return true
             if (allMembers[i] == msg.sender) {
                 return true;

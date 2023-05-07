@@ -1,31 +1,17 @@
 /**
-  * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
-  * © Copyright Utrecht University (Department of Information and Computing Sciences)
-  *
-  * This source code is licensed under the MIT license found in the
-  * LICENSE file in the root directory of this source tree.
-  */
+ * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
+ * © Copyright Utrecht University (Department of Information and Computing Sciences)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import "viem/window";
-import {
-  Account,
-  Chain,
-  createPublicClient,
-  createWalletClient,
-  custom,
-  CustomTransport,
-  getAccount,
-  http,
-  parseEther,
-  WalletClient,
-} from "viem";
-import { mainnet } from "viem/chains";
-import { toast, Toaster } from "react-hot-toast";
-import { GithubVerification } from "../GithubVerification";
-import { CheckBadgeIcon } from "@heroicons/react/24/solid";
+import { Account, getAccount } from "viem";
+import { toast } from "react-hot-toast";
+import { GithubVerificationAbi } from "../GithubVerification";
 import StampCard from "../components/StampCard";
-import { Routes, Route } from "react-router-dom";
 import { Stamp } from "../types/Stamp";
 import {
   apiUrl,
@@ -58,8 +44,10 @@ const Main = () => {
       const stamp = stamps.find(([id]) => id === providerId);
       if (stamp) {
         const [, , verifiedAt] = stamp;
+        const lastVerifiedAt = Number(verifiedAt[verifiedAt.length - 1]);
+
         // Check if it has been more than 30 days
-        if (verifiedAt * 1000 + 30 * 24 * 60 * 60 * 1000 > Date.now()) {
+        if (lastVerifiedAt * 1000 + 30 * 24 * 60 * 60 * 1000 > Date.now()) {
           throw new Error(
             "You have already verified with this provider, please wait at least 30 days after the initial verification to verify again."
           );
@@ -104,21 +92,55 @@ const Main = () => {
     }
   };
 
+  const unverify = async (providerId: string) => {
+    toast.promise(writeToContract(providerId), {
+      loading: "Unverifying, please wait...",
+      success: "Successfully unverified!",
+      error: (err) => err.message.split("\n")[0].substring(0, 100),
+    });
+  };
+
+  const writeToContract = async (providerId: string) => {
+    const { request } = await publicClient.simulateContract({
+      address: contractAddress as any,
+      abi: GithubVerificationAbi,
+      functionName: "unverify",
+      args: [providerId],
+      account,
+    });
+
+    const txhash = await walletClient.writeContract(request);
+
+    const transaction = await publicClient.waitForTransactionReceipt({
+      hash: txhash,
+    });
+
+    if (transaction.status === "reverted") {
+      console.log("reverted", transaction);
+
+      throw new Error("Transaction reverted");
+    }
+
+    console.log("success", transaction);
+
+    window.location.reload();
+  };
+
   useEffect(() => {
     if (account) {
       setStamps([]);
       const checkStamps = async () => {
         const r: any = await publicClient.readContract({
           address: contractAddress as any,
-          abi: GithubVerification.abi,
+          abi: GithubVerificationAbi,
           functionName: "getStamps",
           args: [account.address],
         });
 
         const stamps: Stamp[] = r.map((stamp: any) => [
-          stamp.id,
-          stamp._hash,
-          Number(stamp.verifiedAt),
+          stamp.providerId,
+          stamp.userHash,
+          stamp.verifiedAt,
         ]);
 
         setStamps(stamps);
@@ -144,6 +166,7 @@ const Main = () => {
                   providerId={providerId}
                   stamp={stamps.find(([id]) => id === providerId) || null}
                   verify={verify}
+                  unverify={unverify}
                 />
               ))}
             </div>

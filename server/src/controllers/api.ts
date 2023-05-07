@@ -20,13 +20,9 @@ import { mainnet } from "viem/chains";
 import { mnemonicToSeed } from "bip39";
 import hdkey from "hdkey";
 
-// const transport = http(
-//     config.NODE_ENV === "development" ? "http://127.0.0.1:65534" : "...",
-// );
 const client = createPublicClient({
     chain: mainnet,
     transport: http(),
-    // transport,
 });
 
 const web3provider = new Web3(
@@ -34,12 +30,6 @@ const web3provider = new Web3(
         config.NODE_ENV === "development" ? "http://127.0.0.1:65534" : "...",
     ),
 );
-
-const account = config.PUBLIC_KEY;
-
-// const abi = abiObj.abi;
-// const contractAddress = config.CONTRACT_ADDRESS;
-// const contract = new web3provider.eth.Contract(abi as any, contractAddress);
 
 export const index = async (req: Request, res: Response): Promise<void> => {
     res.json({
