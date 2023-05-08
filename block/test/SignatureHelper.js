@@ -6,7 +6,7 @@
   * LICENSE file in the root directory of this source tree.
   */
 
-const SignatureHelper = artifacts.require("SignatureHelper");
+const SignatureHelperMock = artifacts.require("SignatureHelperMock");
 const Web3 = require("web3");
 
 /**
@@ -56,7 +56,7 @@ contract("SignatureHelper", () => {
    * This gets run before each test. A new contract instance is created before each test.
    */
   beforeEach(async () => {
-    contractInstance = await SignatureHelper.new();
+    contractInstance = await SignatureHelperMock.new();
   });
 
   /**
@@ -64,7 +64,7 @@ contract("SignatureHelper", () => {
    * should match the packed message in JavaScript (back-end).
    */
   it("Packed data in contract should be equal to web3.utils.encodePacked(...)", async () => {
-    const packedMessageSolidity = await contractInstance.getPackedMessage(
+    const packedMessageSolidity = await contractInstance._getPackedMessage(
       address,
       userHash,
       timestamp,
@@ -82,7 +82,7 @@ contract("SignatureHelper", () => {
    * message (a.k.a. messageHash) in JavaScript (back-end).
    */
   it("messageHash from contract should be equal to soliditySha3(packed)", async () => {
-    const hashPackedMessageSolidity = await contractInstance.getMessageHash(
+    const hashPackedMessageSolidity = await contractInstance._getMessageHash(
       address,
       userHash,
       timestamp,
@@ -100,7 +100,7 @@ contract("SignatureHelper", () => {
    */
   it("the signed messageHash from contract should be equal to signedHashPackedMessageWeb3", async () => {
     const signedHashPackedMessageSolidity =
-      await contractInstance.getEthSignedMessageHash(
+      await contractInstance._getEthSignedMessageHash(
         hashPackedMessageWeb3,
         { from: address }
       );
@@ -116,7 +116,7 @@ contract("SignatureHelper", () => {
    * the smart contract) and the original signer should match.
    */
   it("should be able to successfully recover the signer from the signature and the signed messageHash", async () => {
-    const recoveredSigner = await contractInstance.recoverSigner(
+    const recoveredSigner = await contractInstance._recoverSigner(
       signedHashPackedMessageWeb3,
       signature
     );
@@ -132,7 +132,7 @@ contract("SignatureHelper", () => {
    * the signed messageHash and verify the validity of a signature.
    */
   it("should be able verify the validity of a signature given the address to verify, the userhash, and the timestamp", async () => {
-    const verifyResult = await contractInstance.verify(
+    const verifyResult = await contractInstance._verify(
       owner.address,
       address,
       userHash,

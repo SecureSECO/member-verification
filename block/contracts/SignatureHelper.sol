@@ -34,7 +34,7 @@ contract SignatureHelper {
         address _toVerify,
         string memory _userHash,
         uint _timestamp
-    ) public pure returns (bytes memory) {
+    ) internal pure returns (bytes memory) {
         return abi.encodePacked(_toVerify, _userHash, _timestamp);
     }
 
@@ -48,7 +48,7 @@ contract SignatureHelper {
         address _toVerify,
         string memory _userHash,
         uint _timestamp
-    ) public pure returns (bytes32) {
+    ) internal pure returns (bytes32) {
         bytes memory packedMsg = getPackedMessage(_toVerify, _userHash, _timestamp);
         return keccak256(packedMsg);
     }
@@ -58,7 +58,7 @@ contract SignatureHelper {
     /// @return bytes32 Returns the signed messageHash
     function getEthSignedMessageHash(
         bytes32 _messageHash
-    ) public pure returns (bytes32) {
+    ) internal pure returns (bytes32) {
         /*
         Signature is produced by signing a keccak256 hash with the following format:
         "\x19Ethereum Signed Message\n" + len(msg) + msg
@@ -86,7 +86,7 @@ contract SignatureHelper {
         string calldata _userHash,
         uint _timestamp,
         bytes memory _signature
-    ) public pure returns (bool) {
+    ) internal pure returns (bool) {
         bytes32 messageHash = getMessageHash(_toVerify, _userHash, _timestamp);
         bytes32 ethSignedMessageHash = getEthSignedMessageHash(messageHash);
 
@@ -101,7 +101,7 @@ contract SignatureHelper {
     function recoverSigner(
         bytes32 _ethSignedMessageHash,
         bytes memory _signature
-    ) public pure returns (address) {
+    ) internal pure returns (address) {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(_signature);
 
         return ecrecover(_ethSignedMessageHash, v, r, s);
@@ -115,7 +115,7 @@ contract SignatureHelper {
     /// @return v Returns the last byte of the signature
     function splitSignature(
         bytes memory sig
-    ) public pure returns (bytes32 r, bytes32 s, uint8 v) {
+    ) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
         require(sig.length == 65, "invalid signature length");
 
         assembly {
