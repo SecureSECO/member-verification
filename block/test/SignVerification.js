@@ -7,7 +7,7 @@
  */
 
 // TODO: write separate getStamps function to avoid duplicate code
-const GithubVerification = artifacts.require("GithubVerification");
+const GithubVerification = artifacts.require("SignVerification");
 
 const Web3 = require("web3");
 const { time } = require("@openzeppelin/test-helpers");

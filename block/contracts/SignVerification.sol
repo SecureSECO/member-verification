@@ -12,7 +12,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /// @title A contract to verify addresses
 /// @author Utrecht University
 /// @notice You can use this contract to verify addresses
-contract GithubVerification is GenericSignatureHelper, Ownable {
+contract SignVerification is GenericSignatureHelper, Ownable {
     // Map from user to their stamps
     mapping(address => Stamp[]) internal stamps;
     // Map from userhash to address to make sure the userhash isn't already used by another address

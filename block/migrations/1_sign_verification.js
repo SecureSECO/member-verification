@@ -6,7 +6,7 @@
   * LICENSE file in the root directory of this source tree.
   */
 
-var Verification = artifacts.require("./GithubVerification.sol");
+var Verification = artifacts.require("./SignVerification.sol");
 
 module.exports = function (deployer) {
   deployer.deploy(Verification, 60, 30);
