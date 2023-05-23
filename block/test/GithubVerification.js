@@ -568,7 +568,6 @@ contract("GithubVerification", async (accounts) => {
 
       // Alice should be a member
       let isOrWasMember = await contractInstance.isOrWasMember(alice);
-      console.log(isOrWasMember);
       assert(isOrWasMember, "Alice should be a member");
 
       // Alice should still be a member after unverification

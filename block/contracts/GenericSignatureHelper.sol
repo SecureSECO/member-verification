@@ -23,7 +23,7 @@ How to Sign and Verify
 */
 
 /// @title Set of (helper) functions for signature verification
-contract SignatureHelper {
+contract GenericSignatureHelper {
     /// @notice Packs three parameters (address, string, uint) into one packed message
     /// @dev This is done before the keccak256 hash
     /// @param _toVerify The address to verify
@@ -75,20 +75,18 @@ contract SignatureHelper {
     /// @notice Verify a signature
     /// @dev Generate the signed messageHash from the parameters to verify the signature against
     /// @param _signer The signer of the signature (the owner of the contract)
-    /// @param _toVerify The address to verify
-    /// @param _userHash Unique user hash of the platform of the stamp (GH, PoH, etc.)
-    /// @param _timestamp Timestamp at which the proof was generated
     /// @param _signature The signature of the proof signed by the signer
     /// @return bool Returns the result of the verification, where true indicates success and false indicates failure
     function verify(
         address _signer,
-        address _toVerify,
-        string calldata _userHash,
-        uint _timestamp,
+        // address _toVerify,
+        // string calldata _userHash,
+        // uint _timestamp,
+        bytes32 _messageHash,
         bytes memory _signature
     ) internal pure returns (bool) {
-        bytes32 messageHash = getMessageHash(_toVerify, _userHash, _timestamp);
-        bytes32 ethSignedMessageHash = getEthSignedMessageHash(messageHash);
+        // bytes32 messageHash = getMessageHash(_toVerify, _userHash, _timestamp);
+        bytes32 ethSignedMessageHash = getEthSignedMessageHash(_messageHash);
 
         return recoverSigner(ethSignedMessageHash, _signature) == _signer;
     }

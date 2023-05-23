@@ -134,9 +134,7 @@ contract("SignatureHelper", () => {
   it("should be able verify the validity of a signature given the address to verify, the userhash, and the timestamp", async () => {
     const verifyResult = await contractInstance._verify(
       owner.address,
-      address,
-      userHash,
-      timestamp,
+      hashPackedMessageWeb3,
       signature
     );
 
