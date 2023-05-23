@@ -6,13 +6,13 @@
 
 pragma solidity ^0.8.0;
 
-import "./SignatureHelper.sol";
+import {GenericSignatureHelper} from "./GenericSignatureHelper.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title A contract to verify addresses
 /// @author Utrecht University
 /// @notice You can use this contract to verify addresses
-contract GithubVerification is SignatureHelper, Ownable {
+contract SignVerification is GenericSignatureHelper, Ownable {
     // Map from user to their stamps
     mapping(address => Stamp[]) internal stamps;
     // Map from userhash to address to make sure the userhash isn't already used by another address
@@ -70,7 +70,7 @@ contract GithubVerification is SignatureHelper, Ownable {
         );
 
         require(
-            verify(owner(), _toVerify, _userHash, _timestamp, _proofSignature),
+            verify(owner(), keccak256(abi.encodePacked(_toVerify, _userHash, uint(_timestamp))), _proofSignature),
             "Proof is not valid"
         );
 

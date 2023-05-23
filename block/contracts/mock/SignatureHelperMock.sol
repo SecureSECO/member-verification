@@ -6,10 +6,10 @@
 
 pragma solidity ^0.8.17;
 
-import { SignatureHelper } from "../SignatureHelper.sol";
+import { GenericSignatureHelper } from "../GenericSignatureHelper.sol";
 
-/// @notice This contract exposes the internal functions of the SignatureHelper contract for testing purposes
-contract SignatureHelperMock is SignatureHelper {
+/// @notice This contract exposes the internal functions of the GenericSignatureHelper contract for testing purposes
+contract SignatureHelperMock is GenericSignatureHelper {
     function _getPackedMessage(
         address _toVerify,
         string memory _userHash,
@@ -34,12 +34,13 @@ contract SignatureHelperMock is SignatureHelper {
 
     function _verify(
         address _signer,
-        address _toVerify,
-        string calldata _userHash,
-        uint _timestamp,
+        // address _toVerify,
+        // string calldata _userHash,
+        // uint _timestamp,
+        bytes32 _messageHash,
         bytes memory _signature
     ) external pure returns (bool) {
-        return verify(_signer, _toVerify, _userHash, _timestamp, _signature);
+        return verify(_signer, _messageHash, _signature);
     }
 
     function _recoverSigner(
