@@ -1,31 +1,15 @@
 // SPDX-License-Identifier: MIT
 /**
-  * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
-  * © Copyright Utrecht University (Department of Information and Computing Sciences)
-  */
+ * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
+ * © Copyright Utrecht University (Department of Information and Computing Sciences)
+ */
 
 pragma solidity ^0.8.17;
 
-import { GenericSignatureHelper } from "../GenericSignatureHelper.sol";
+import {GenericSignatureHelper} from "../GenericSignatureHelper.sol";
 
 /// @notice This contract exposes the internal functions of the GenericSignatureHelper contract for testing purposes
 contract SignatureHelperMock is GenericSignatureHelper {
-    function _getPackedMessage(
-        address _toVerify,
-        string memory _userHash,
-        uint _timestamp
-    ) external pure returns (bytes memory) {
-        return getPackedMessage(_toVerify, _userHash, _timestamp);
-    }
-
-    function _getMessageHash(
-        address _toVerify,
-        string memory _userHash,
-        uint _timestamp
-    ) external pure returns (bytes32) {
-        return getMessageHash(_toVerify, _userHash, _timestamp);
-    }
-
     function _getEthSignedMessageHash(
         bytes32 _messageHash
     ) external pure returns (bytes32) {
