@@ -8,7 +8,7 @@ pragma solidity ^0.8.17;
 
 import { GenericSignatureHelper } from "../GenericSignatureHelper.sol";
 
-/// @notice This contract exposes the internal functions of the SignatureHelper contract for testing purposes
+/// @notice This contract exposes the internal functions of the GenericSignatureHelper contract for testing purposes
 contract SignatureHelperMock is GenericSignatureHelper {
     function _getPackedMessage(
         address _toVerify,

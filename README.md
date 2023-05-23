@@ -12,7 +12,7 @@ The block component contains the smart contracts that are used to verify the ide
 
 The package contains two smart contracts:
 
-1. GithubVerification.sol: Contains various functions that the user can call to verify their identity using a proof (more on that later).
+1. SignVerification.sol: Contains various functions that the user can call to verify their identity using a proof (more on that later).
 2. SignatureHelper.sol: Helper functions to verify signatures.
 
 ### Server

@@ -7,7 +7,7 @@
  */
 
 // TODO: write separate getStamps function to avoid duplicate code
-const GithubVerification = artifacts.require("SignVerification");
+const SignVerification = artifacts.require("SignVerification");
 
 const Web3 = require("web3");
 const { time } = require("@openzeppelin/test-helpers");
@@ -26,9 +26,9 @@ const VERIFY_DAY_THRESHOLD = 60;
 const REVERIFY_DAY_THRESHOLD = 30;
 
 /**
- * Test suite for the main contract of the Github Verification
+ * Test suite for the main contract of the Sign Verification
  */
-contract("GithubVerification", async (accounts) => {
+contract("SignVerification", async (accounts) => {
   // One time setup for the web3 constants
   const web3 = new Web3(
     new Web3.providers.HttpProvider("http://127.0.0.1:65534")
@@ -68,7 +68,7 @@ contract("GithubVerification", async (accounts) => {
    * This gets run before each test. A new contract instance is created before each test.
    */
   beforeEach(async () => {
-    contractInstance = await GithubVerification.new(
+    contractInstance = await SignVerification.new(
       VERIFY_DAY_THRESHOLD,
       REVERIFY_DAY_THRESHOLD,
       {
