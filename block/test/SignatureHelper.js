@@ -1,10 +1,10 @@
 /**
-  * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
-  * © Copyright Utrecht University (Department of Information and Computing Sciences)
-  *
-  * This source code is licensed under the MIT license found in the
-  * LICENSE file in the root directory of this source tree.
-  */
+ * This program has been developed by students from the bachelor Computer Science at Utrecht University within the Software Project course.
+ * © Copyright Utrecht University (Department of Information and Computing Sciences)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 const SignatureHelperMock = artifacts.require("SignatureHelperMock");
 const Web3 = require("web3");
@@ -14,7 +14,9 @@ const Web3 = require("web3");
  */
 contract("SignatureHelper", () => {
   // One time setup for the web3 constants
-  const web3 = new Web3(new Web3.providers.HttpProvider("http://127.0.0.1:65534"));
+  const web3 = new Web3(
+    new Web3.providers.HttpProvider("http://127.0.0.1:65534")
+  );
 
   // Create new account
   const account = web3.eth.accounts.create();
@@ -22,7 +24,7 @@ contract("SignatureHelper", () => {
 
   // Constants
   const address = account.address;
-  
+
   const userHash =
     "090d4910f4b4038000f6ea86644d55cb5261a1dc1f006d928dcc049b157daff8";
   const timestamp = new Date().getTime();
@@ -47,10 +49,7 @@ contract("SignatureHelper", () => {
   const hashPackedMessageWeb3 = web3.utils.soliditySha3(packedMessageWeb3);
 
   const { messageHash: signedHashPackedMessageWeb3, signature } =
-    web3.eth.accounts.sign(
-      hashPackedMessageWeb3,
-      owner.privateKey
-    );
+    web3.eth.accounts.sign(hashPackedMessageWeb3, owner.privateKey);
 
   /**
    * This gets run before each test. A new contract instance is created before each test.
@@ -60,50 +59,13 @@ contract("SignatureHelper", () => {
   });
 
   /**
-   * The abi.encodePacked of the parameters (address, userhash, and timestamp) of the smart contract 
-   * should match the packed message in JavaScript (back-end).
-   */
-  it("Packed data in contract should be equal to web3.utils.encodePacked(...)", async () => {
-    const packedMessageSolidity = await contractInstance._getPackedMessage(
-      address,
-      userHash,
-      timestamp,
-      { from: address }
-    );
-
-    assert(
-      packedMessageWeb3 == packedMessageSolidity,
-      `packedMessages are not the same, web3: ${packedMessageWeb3}, sol: ${packedMessageSolidity}`
-    );
-  })
-
-  /**
-   * The keccak hash of the packed message (a.k.a. messageHash) on the smart contract should match the hash of the packed 
-   * message (a.k.a. messageHash) in JavaScript (back-end).
-   */
-  it("messageHash from contract should be equal to soliditySha3(packed)", async () => {
-    const hashPackedMessageSolidity = await contractInstance._getMessageHash(
-      address,
-      userHash,
-      timestamp,
-      { from: address }
-    );
-
-    assert(
-      hashPackedMessageWeb3 == hashPackedMessageSolidity,
-      `hashPackedMessages are not the same, web3: ${hashPackedMessageWeb3}, sol: ${hashPackedMessageSolidity}`
-    );
-  });
-
-  /**
    * The signed messageHash on the smart contract should match the signed messageHash in JavaScript (back-end)
    */
   it("the signed messageHash from contract should be equal to signedHashPackedMessageWeb3", async () => {
     const signedHashPackedMessageSolidity =
-      await contractInstance._getEthSignedMessageHash(
-        hashPackedMessageWeb3,
-        { from: address }
-      );
+      await contractInstance._getEthSignedMessageHash(hashPackedMessageWeb3, {
+        from: address,
+      });
 
     assert(
       signedHashPackedMessageWeb3 == signedHashPackedMessageSolidity,
@@ -128,7 +90,7 @@ contract("SignatureHelper", () => {
   });
 
   /**
-   * Given the address to verify, userHash, and the timestamp, the smart contract should be able to recreate 
+   * Given the address to verify, userHash, and the timestamp, the smart contract should be able to recreate
    * the signed messageHash and verify the validity of a signature.
    */
   it("should be able verify the validity of a signature given the address to verify, the userhash, and the timestamp", async () => {

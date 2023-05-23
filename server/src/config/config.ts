@@ -17,7 +17,6 @@ interface ENV {
     NODE_ENV: string | undefined;
     GITHUB_CLIENT_ID: string | undefined;
     GITHUB_CLIENT_SECRET: string | undefined;
-    PUBLIC_KEY: string | undefined;
     PRIVATE_KEY: string | undefined;
     HASH_SECRET: string | undefined;
     FRONTEND_URL: string | undefined;
@@ -28,7 +27,6 @@ interface Config {
     NODE_ENV: string;
     GITHUB_CLIENT_ID: string;
     GITHUB_CLIENT_SECRET: string;
-    PUBLIC_KEY: string;
     PRIVATE_KEY: string;
     HASH_SECRET: string;
     FRONTEND_URL: string;
@@ -40,7 +38,6 @@ const getConfig = (): ENV => {
         NODE_ENV: process.env.NODE_ENV,
         GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
         GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
-        PUBLIC_KEY: process.env.PUBLIC_KEY,
         PRIVATE_KEY: process.env.PRIVATE_KEY,
         HASH_SECRET: process.env.HASH_SECRET,
         FRONTEND_URL: process.env.FRONTEND_URL,
