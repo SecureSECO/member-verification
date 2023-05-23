@@ -555,5 +555,42 @@ contract("GithubVerification", async (accounts) => {
       const allMembers = await contractInstance.getAllMembers();
       assert(allMembers.length == 1 && allMembers[0] == alice);
     });
+
+    it("is or was member works correctly", async () => {
+      // Alice's verification with userhash (this should succeed)
+      await contractInstance.verifyAddress(
+        alice,
+        userHash,
+        timestamp,
+        "github",
+        signature
+      );
+
+      // Alice should be a member
+      let isOrWasMember = await contractInstance.isOrWasMember(alice);
+      console.log(isOrWasMember);
+      assert(isOrWasMember, "Alice should be a member");
+
+      // Alice should still be a member after unverification
+      await contractInstance.unverify("github", {
+        from: alice,
+      });
+      isOrWasMember = await contractInstance.isOrWasMember(alice);
+      assert(isOrWasMember, "Alice should still be a member after unverification");
+
+      // Alice's verification with userhash (this should succeed)
+      await contractInstance.verifyAddress(
+        alice,
+        userHash,
+        timestamp,
+        "github",
+        signature
+      );
+      isOrWasMember = await contractInstance.isOrWasMember(alice);
+      assert(isOrWasMember, "Alice should be a member after \"re-verification\"");
+
+      const allMembers = await contractInstance.getAllMembers();
+      assert(allMembers.length == 1 && allMembers[0] == alice, "No duplicate members should be added");
+    });
   });
 });

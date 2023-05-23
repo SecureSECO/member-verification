@@ -17,6 +17,8 @@ contract GithubVerification is SignatureHelper, Ownable {
     mapping(address => Stamp[]) internal stamps;
     // Map from userhash to address to make sure the userhash isn't already used by another address
     mapping(string => address) internal stampHashMap;
+    // Map to show if an address has ever been verified
+    mapping(address => bool) internal isMember;
     address[] allMembers;
 
     /// @notice The thresholdHistory array stores the history of the verifyDayThreshold variable. This is needed because we might want to check if some stamps were valid in the past.
@@ -93,7 +95,8 @@ contract GithubVerification is SignatureHelper, Ownable {
 
         if (!found) {
             // Check if this is the first time this user has verified so we can add them to the allMembers list
-            if (stamps[_toVerify].length == 0) {
+            if (!isMember[_toVerify]) {
+                isMember[_toVerify] = true;
                 allMembers.push(_toVerify);
             }
 
@@ -277,19 +280,8 @@ contract GithubVerification is SignatureHelper, Ownable {
     /// @notice Returns whether or not the caller is or was a member at any time
     /// @dev Loop through the array of all members and return true if the caller is found
     /// @return bool Whether or not the caller is or was a member at any time
-    function isOrWasMember() external view returns (bool) {
-        // Loop through the member array
-        for (uint i; i < allMembers.length; ) {
-            // If the member is found, return true
-            if (allMembers[i] == msg.sender) {
-                return true;
-            }
-
-            unchecked {
-                i++;
-            }
-        }
-        return false;
+    function isOrWasMember(address _toCheck) external view returns (bool) {
+        return isMember[_toCheck];
     }
 
     /// @notice This function can only be called by the owner to set the reverifyThreshold
