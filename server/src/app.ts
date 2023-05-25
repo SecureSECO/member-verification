@@ -33,7 +33,7 @@ app.use(logger("dev"));
 
 // app.use(express.static(path.join(__dirname, "../public")));
 app.use("/", index);
-app.use("/api", api);
+app.use("/verification_api", api);
 
 app.use(errors());
 app.use(errorNotFoundHandler);
