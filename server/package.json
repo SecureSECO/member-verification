@@ -4,7 +4,8 @@
     "description": "SecureSECO Verification Server",
     "main": "server.js",
     "scripts": {
-        "start": "npm run build && npm run serve",
+        "start": "npm run serve",
+        "dev": "npm run build && npm run serve",
         "build": "npm run build-ts && cp src/config/.env dist/config/.env | true",
         "serve": "node dist/server.js",
         "test": "jest --coverage=false --verbose",
