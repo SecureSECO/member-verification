@@ -124,7 +124,7 @@ const generateProof = async (
 /// GITHUB OAUTH
 const REDIRECT_URI =
     config.NODE_ENV === "production"
-        ? "https://securesecodao.science.uu.nl/verification_api/github_callback"
+        ? "https://securesecodao-api.herokuapp.com/verification_api/github_callback"
         : "http://localhost:43210/api/github_callback";
 export const authorize = async (req: Request, res: Response): Promise<void> => {
     try {
