@@ -1,6 +1,6 @@
 # SecureSECO Verification Suite
 
-This repository contains the source code for the SecureSECO DAO Verification Suite, a tool to verify the identity of users and have that data be available on-chain.
+This repository contains the source code for the SecureSECO Verification Suite, a tool to verify the identity of users and have that data be available on-chain.
 
 ## Components
 
