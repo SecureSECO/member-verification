@@ -242,11 +242,6 @@ export const githubCallback = async (
             "github",
         );
 
-        // res.json({
-        //     ok: true,
-        //     verificationData,
-        // });
-
         res.redirect(
             `${config.FRONTEND_URL}/verification?new=true&address=${state}` +
                 `&hash=${verificationData.hash}&timestamp=${verificationData.timestamp}` +
