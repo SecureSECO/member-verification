@@ -57,7 +57,9 @@ type VerificationData = {
     address: string;
     hash: string;
     timestamp: number;
+    providerId: ProviderID;
     sig: string;
+    redirectUrl: string;
 };
 
 /**
@@ -74,7 +76,7 @@ const getVerificationData = async (
                 .update(id + providerId + config.HASH_SECRET)
                 .digest("hex");
 
-            const proof = await generateProof(address, hash);
+            const proof = await generateProof(address, hash, providerId);
 
             resolve(proof);
         } catch (error) {
@@ -86,6 +88,7 @@ const getVerificationData = async (
 const generateProof = async (
     address: string,
     hash: string,
+    providerId: ProviderID,
 ): Promise<VerificationData> => {
     const timestamp = Math.floor(Date.now() / 1000);
     const hashedMessage = web3provider.utils.soliditySha3(
@@ -102,6 +105,10 @@ const generateProof = async (
                 type: "uint256",
                 value: timestamp.toString(),
             },
+            {
+                type: "string",
+                value: providerId,
+            },
         ),
     );
 
@@ -117,7 +124,12 @@ const generateProof = async (
         address,
         hash,
         timestamp,
+        providerId,
         sig,
+        redirectUrl:
+            `${config.FRONTEND_URL}/verification?new=true&address=${address}` +
+            `&hash=${hash}&timestamp=${timestamp}` +
+            `&sig=${sig}&providerId=${providerId}`,
     };
 };
 
@@ -242,11 +254,7 @@ export const githubCallback = async (
             "github",
         );
 
-        res.redirect(
-            `${config.FRONTEND_URL}/verification?new=true&address=${state}` +
-                `&hash=${verificationData.hash}&timestamp=${verificationData.timestamp}` +
-                `&sig=${verificationData.sig}&providerId=github`,
-        );
+        res.redirect(verificationData.redirectUrl);
     } catch (error) {
         console.log(error);
         res.json({
@@ -271,11 +279,7 @@ export const proofOfHumanityUrl = async (address: string): Promise<string> => {
             "proofofhumanity",
         );
 
-        return (
-            `${config.FRONTEND_URL}/verification?new=true&address=${address}` +
-            `&hash=${verificationData.hash}&timestamp=${verificationData.timestamp}` +
-            `&sig=${verificationData.sig}&providerId=proofofhumanity`
-        );
+        return verificationData.redirectUrl;
     } else {
         throw new Error("Not registered on Proof of Humanity");
     }
