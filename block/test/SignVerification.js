@@ -25,6 +25,8 @@ dotenv.config();
 const VERIFY_DAY_THRESHOLD = 60;
 const REVERIFY_DAY_THRESHOLD = 30;
 
+const PROVIDER_ID = "github";
+
 /**
  * Test suite for the main contract of the Sign Verification
  */
@@ -56,6 +58,10 @@ contract("SignVerification", async (accounts) => {
     {
       type: "uint256",
       value: timestamp,
+    },
+    {
+      type: "string",
+      value: PROVIDER_ID,
     }
   );
 
@@ -86,14 +92,14 @@ contract("SignVerification", async (accounts) => {
         alice,
         userHash,
         timestamp,
-        "github",
+        PROVIDER_ID,
         signature
       );
 
       // Check if verification got added in the form of a GitHub stamp
       const stamps = await contractInstance.getStamps(alice);
       assert(stamps.length === 1, "Length of stamps array is not equal to 1");
-      assert(stamps[0][0] === "github", "Provider id should be github");
+      assert(stamps[0][0] === PROVIDER_ID, "Provider id should be github");
       assert(stamps[0][1] === userHash, "Userhashes not equal");
       assert(stamps[0][2] == timestamp, "Timestamps not equal");
     } catch (error) {
@@ -112,7 +118,7 @@ contract("SignVerification", async (accounts) => {
           alice,
           userHash,
           timestamp,
-          "github",
+          PROVIDER_ID,
           signature
         );
 
@@ -125,7 +131,7 @@ contract("SignVerification", async (accounts) => {
           bob,
           userHash,
           timestamp,
-          "github",
+          PROVIDER_ID,
           signature // This is not the signature for Bob
         );
       }, "ID already affiliated with another address");
@@ -143,7 +149,7 @@ contract("SignVerification", async (accounts) => {
           "0x0000000000000000000000000000000000000000",
           userHash,
           timestamp,
-          "github",
+          PROVIDER_ID,
           signature // This is not the signature for 0x0
         );
       }, "Address cannot be 0x0");
@@ -170,7 +176,7 @@ contract("SignVerification", async (accounts) => {
           alice,
           userHash,
           newTimestamp,
-          "github",
+          PROVIDER_ID,
           value.signature
         );
       }, "Proof expired, try verifying again");
@@ -195,7 +201,7 @@ contract("SignVerification", async (accounts) => {
           bob,
           userHash,
           timestamp,
-          "github",
+          PROVIDER_ID,
           value.signature
         );
       }, "Proof is not valid");
@@ -211,7 +217,7 @@ contract("SignVerification", async (accounts) => {
         alice,
         userHash,
         timestamp,
-        "github",
+        PROVIDER_ID,
         signature
       );
     });
@@ -235,7 +241,7 @@ contract("SignVerification", async (accounts) => {
           alice,
           userHash,
           newTimestamp,
-          "github",
+          PROVIDER_ID,
           newSignature
         );
       } catch (error) {
@@ -277,14 +283,14 @@ contract("SignVerification", async (accounts) => {
           alice,
           userHash,
           newTimestamp,
-          "github",
+          PROVIDER_ID,
           newSignature
         );
 
         // Check if reverification successfully updated the timestamp on Alice's GitHub stamp
         stamps = await contractInstance.getStamps(alice);
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
-        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][0] === PROVIDER_ID, "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
         assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
         assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
@@ -316,13 +322,13 @@ contract("SignVerification", async (accounts) => {
           alice,
           userHash,
           newTimestamp,
-          "github",
+          PROVIDER_ID,
           newSignature
         );
 
         stamps = await contractInstance.getStampsAt(alice, timestamp + 60);
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
-        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][0] === PROVIDER_ID, "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
         assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
         assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
@@ -335,7 +341,7 @@ contract("SignVerification", async (accounts) => {
 
         stamps = await contractInstance.getStampsAt(alice, newTimestamp + 60);
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
-        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][0] === PROVIDER_ID, "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
         assert(stamps[0][2][0] == timestamp, "New timestamps not equal");
         assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
@@ -391,7 +397,7 @@ contract("SignVerification", async (accounts) => {
           alice,
           userHash,
           newTimestamp,
-          "github",
+          PROVIDER_ID,
           newSignature
         );
 
@@ -404,7 +410,7 @@ contract("SignVerification", async (accounts) => {
           timestamp + days(VERIFY_DAY_THRESHOLD / 2)
         );
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
-        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][0] === PROVIDER_ID, "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
         assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
         assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
@@ -422,7 +428,7 @@ contract("SignVerification", async (accounts) => {
         // Assert validity
         stamps = await contractInstance.getStampsAt(alice, newTimestamp + 60);
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
-        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][0] === PROVIDER_ID, "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
         assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
         assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
@@ -472,14 +478,14 @@ contract("SignVerification", async (accounts) => {
           alice,
           userHash,
           newTimestamp,
-          "github",
+          PROVIDER_ID,
           newSignature
         );
 
         // Check if reverification successfully updated the timestamp on Alice's GitHub stamp
         stamps = await contractInstance.getStamps(alice);
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
-        assert(stamps[0][0] === "github", "Provider id should be github");
+        assert(stamps[0][0] === PROVIDER_ID, "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
         assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
         assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
@@ -495,11 +501,11 @@ contract("SignVerification", async (accounts) => {
           alice,
           userHash,
           timestamp,
-          "github",
+          PROVIDER_ID,
           signature
         );
 
-        await contractInstance.unverify("github", {
+        await contractInstance.unverify(PROVIDER_ID, {
           from: alice,
         });
 
@@ -517,7 +523,7 @@ contract("SignVerification", async (accounts) => {
     it("should not be able to unverify a non-existing stamp", async () => {
       await shouldFail(async () => {
         // This shouldn't do anything
-        await contractInstance.unverify("github", {
+        await contractInstance.unverify(PROVIDER_ID, {
           from: alice,
         });
       }, "Could not find this provider among your stamps; are you sure you're verified with this provider?");
@@ -530,7 +536,7 @@ contract("SignVerification", async (accounts) => {
           alice,
           userHash,
           timestamp,
-          "github",
+          PROVIDER_ID,
           signature
         );
 
@@ -548,7 +554,7 @@ contract("SignVerification", async (accounts) => {
         alice,
         userHash,
         timestamp,
-        "github",
+        PROVIDER_ID,
         signature
       );
 
@@ -562,7 +568,7 @@ contract("SignVerification", async (accounts) => {
         alice,
         userHash,
         timestamp,
-        "github",
+        PROVIDER_ID,
         signature
       );
 
@@ -571,7 +577,7 @@ contract("SignVerification", async (accounts) => {
       assert(isOrWasMember, "Alice should be a member");
 
       // Alice should still be a member after unverification
-      await contractInstance.unverify("github", {
+      await contractInstance.unverify(PROVIDER_ID, {
         from: alice,
       });
       isOrWasMember = await contractInstance.isOrWasMember(alice);
@@ -582,7 +588,7 @@ contract("SignVerification", async (accounts) => {
         alice,
         userHash,
         timestamp,
-        "github",
+        PROVIDER_ID,
         signature
       );
       isOrWasMember = await contractInstance.isOrWasMember(alice);
