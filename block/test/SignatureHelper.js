@@ -43,6 +43,10 @@ contract("SignatureHelper", () => {
     {
       type: "uint256",
       value: timestamp,
+    },
+    {
+      type: "string",
+      value: "github",
     }
   );
 

@@ -55,6 +55,10 @@ const createSignature = async (timestamp, toVerify, ownerPrivKey) => {
     {
       type: "uint256",
       value: timestamp,
+    },
+    {
+      type: "string",
+      value: "github",
     }
   );
 
