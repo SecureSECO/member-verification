@@ -41,8 +41,8 @@ contract SignVerification is GenericSignatureHelper, Ownable {
     }
 
     /// @notice Initializes the owner of the contract
-    constructor(uint64 _threshold, uint _reverifyThreshold) {
-        thresholdHistory.push(Threshold(uint(block.number), _threshold));
+    constructor(uint _threshold, uint _reverifyThreshold) {
+        thresholdHistory.push(Threshold(block.number, _threshold));
         reverifyThreshold = _reverifyThreshold;
     }
 
