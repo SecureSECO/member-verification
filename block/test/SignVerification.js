@@ -6,7 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// TODO: write separate getStamps function to avoid duplicate code
 const SignVerification = artifacts.require("SignVerification");
 
 const Web3 = require("web3");
@@ -22,8 +21,8 @@ const {
 const dotenv = require("dotenv");
 dotenv.config();
 
-const VERIFY_DAY_THRESHOLD = 60;
-const REVERIFY_DAY_THRESHOLD = 30;
+const VERIFY_BLOCK_THRESHOLD = 60;
+const REVERIFY_BLOCK_THRESHOLD = 30;
 
 const PROVIDER_ID = "github";
 
@@ -75,8 +74,8 @@ contract("SignVerification", async (accounts) => {
    */
   beforeEach(async () => {
     contractInstance = await SignVerification.new(
-      VERIFY_DAY_THRESHOLD,
-      REVERIFY_DAY_THRESHOLD,
+      VERIFY_BLOCK_THRESHOLD,
+      REVERIFY_BLOCK_THRESHOLD,
       {
         from: owner,
       }
@@ -101,7 +100,7 @@ contract("SignVerification", async (accounts) => {
       assert(stamps.length === 1, "Length of stamps array is not equal to 1");
       assert(stamps[0][0] === PROVIDER_ID, "Provider id should be github");
       assert(stamps[0][1] === userHash, "Userhashes not equal");
-      assert(stamps[0][2] == timestamp, "Timestamps not equal");
+      assert(stamps[0][2] == result.receipt.blockNumber, "Timestamps not equal");
     } catch (error) {
       assert(false, error.message);
     }
@@ -210,16 +209,19 @@ contract("SignVerification", async (accounts) => {
 
   context("Reverification threshold testing", async function () {
     this.timeout(10000);
+    let transactionReceipt;
 
     beforeEach(async () => {
       // Alice's verification with userhash (this should succeed)
-      await contractInstance.verifyAddress(
+      const result = await contractInstance.verifyAddress(
         alice,
         userHash,
         timestamp,
         PROVIDER_ID,
         signature
       );
+
+      transactionReceipt = result.receipt;
     });
 
     /**
@@ -261,15 +263,9 @@ contract("SignVerification", async (accounts) => {
      */
     it("Should be able to reverify after half the verifyDayThreshold has passed", async () => {
       await snapshotHelper(async () => {
-        // Manually increase the time on the blockchain by VERIFICATION_DAY_THRESHOLD / 2 days
-        await time.increase((VERIFY_DAY_THRESHOLD / 2) * 24 * 60 * 60); // Time in seconds
-
-        // New timestamp VERIFICATION_DAY_THRESHOLD / 2 days from now (which should match the current blockchain time)
-        const newTimestamp = Math.floor(
-          (new Date().getTime() +
-            (VERIFY_DAY_THRESHOLD / 2) * 24 * 60 * 60 * 1000) /
-            1000
-        );
+        // Manually increase the time on the blockchain by VERIFICATION_DAY_THRESHOLD / 2
+        await time.advanceBlockTo(transactionReceipt.blockNumber + VERIFY_BLOCK_THRESHOLD / 2);
+        const newTimestamp = await time.latest();
 
         const { signature: newSignature } = await createSignature(
           newTimestamp,
@@ -279,7 +275,7 @@ contract("SignVerification", async (accounts) => {
 
         // Alice's second verification (more than half the verifyDayThreshold after the first) -> this should succeed
         // Because we allow reverifications after half the verifyDayThreshold (which is VERIFICATION_DAY_THRESHOLD / 2 days)
-        await contractInstance.verifyAddress(
+        const newResult = await contractInstance.verifyAddress(
           alice,
           userHash,
           newTimestamp,
@@ -292,23 +288,17 @@ contract("SignVerification", async (accounts) => {
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
         assert(stamps[0][0] === PROVIDER_ID, "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
-        assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
-        assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
+        assert(stamps[0][2][0] == transactionReceipt.blockNumber, "Old block numbers not equal");
+        assert(stamps[0][2][1] == newResult.receipt.blockNumber, "New block numbers not equal");
       });
     });
 
-    // TODO: fix comments later
     it("Should be able to correctly retrieve the stamps at any given timestamp", async () => {
       await snapshotHelper(async () => {
-        // Manually increase the time on the blockchain by VERIFICATION_DAY_THRESHOLD * 2 days
-        await time.increase(VERIFY_DAY_THRESHOLD * 2 * 24 * 60 * 60); // Time in seconds
+        // Manually increase the time on the blockchain by VERIFICATION_DAY_THRESHOLD * 2
+        await time.advanceBlockTo(transactionReceipt.blockNumber + VERIFY_BLOCK_THRESHOLD * 2);
 
-        // New timestamp VERIFICATION_DAY_THRESHOLD / 2 days from now (which should match the current blockchain time)
-        const newTimestamp = Math.floor(
-          (new Date().getTime() +
-            VERIFY_DAY_THRESHOLD * 2 * 24 * 60 * 60 * 1000) /
-            1000
-        );
+        const newTimestamp = await time.latest();
 
         const { signature: newSignature } = await createSignature(
           newTimestamp,
@@ -318,7 +308,7 @@ contract("SignVerification", async (accounts) => {
 
         // Alice's second verification (more than half the verifyDayThreshold after the first) -> this should succeed
         // Because we allow reverifications after half the verifyDayThreshold (which is VERIFICATION_DAY_THRESHOLD / 2 days)
-        await contractInstance.verifyAddress(
+        const newResult = await contractInstance.verifyAddress(
           alice,
           userHash,
           newTimestamp,
@@ -326,25 +316,25 @@ contract("SignVerification", async (accounts) => {
           newSignature
         );
 
-        stamps = await contractInstance.getStampsAt(alice, timestamp + 60);
+        stamps = await contractInstance.getStampsAt(alice, transactionReceipt.blockNumber + 1);
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
         assert(stamps[0][0] === PROVIDER_ID, "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
-        assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
-        assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
+        assert(stamps[0][2][0] == transactionReceipt.blockNumber, "Old block numbers not equal");
+        assert(stamps[0][2][1] == newResult.receipt.blockNumber, "New block numbers not equal");
 
         stamps = await contractInstance.getStampsAt(
           alice,
-          timestamp + days(VERIFY_DAY_THRESHOLD) + 60
+          transactionReceipt.blockNumber + VERIFY_BLOCK_THRESHOLD + 1
         );
         assert(stamps.length === 0, "Length of stamps array is not equal to 0");
 
-        stamps = await contractInstance.getStampsAt(alice, newTimestamp + 60);
+        stamps = await contractInstance.getStampsAt(alice, newResult.receipt.blockNumber + 1);
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
         assert(stamps[0][0] === PROVIDER_ID, "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
-        assert(stamps[0][2][0] == timestamp, "New timestamps not equal");
-        assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
+        assert(stamps[0][2][0] == transactionReceipt.blockNumber, "Old block numbers not equal");
+        assert(stamps[0][2][1] == newResult.receipt.blockNumber, "New block numbers not equal");
       });
     });
 
@@ -364,25 +354,20 @@ contract("SignVerification", async (accounts) => {
      */
     it("Should give correct validity at given timestamp even after verifyDayThreshold change", async () => {
       await snapshotHelper(async () => {
-        // Manually increase the time on the blockchain by VERIFICATION_DAY_THRESHOLD * 2 days
-        await time.increase(VERIFY_DAY_THRESHOLD * 2 * 24 * 60 * 60); // Time in seconds
+        // Manually increase the time on the blockchain by VERIFICATION_DAY_THRESHOLD * 2
+        await time.advanceBlockTo(transactionReceipt.blockNumber + VERIFY_BLOCK_THRESHOLD * 2);
 
         /*
          * Change the verifyDayThreshold to be half of what it was before
          */
         await contractInstance.setVerifyDayThreshold(
-          Math.floor(VERIFY_DAY_THRESHOLD / 2),
+          Math.floor(VERIFY_BLOCK_THRESHOLD / 2),
           {
             from: owner,
           }
         );
 
-        // New timestamp VERIFICATION_DAY_THRESHOLD * 2 days from now (which should match the current blockchain time)
-        const newTimestamp = Math.floor(
-          (new Date().getTime() +
-            VERIFY_DAY_THRESHOLD * 2 * 24 * 60 * 60 * 1000) /
-            1000
-        );
+        const newTimestamp = await time.latest();
 
         const { signature: newSignature } = await createSignature(
           newTimestamp,
@@ -393,7 +378,7 @@ contract("SignVerification", async (accounts) => {
         /*
          * Alice's second verification after verificationDayThreshold was halved, this should succeed
          */
-        await contractInstance.verifyAddress(
+        const newResult = await contractInstance.verifyAddress(
           alice,
           userHash,
           newTimestamp,
@@ -405,39 +390,30 @@ contract("SignVerification", async (accounts) => {
          * Check if Alice is valid at the aforementioned timestamps
          */
         // Assert validity
-        stamps = await contractInstance.getStampsAt(
-          alice,
-          timestamp + days(VERIFY_DAY_THRESHOLD / 2)
-        );
+        stamps = await contractInstance.getStampsAt(alice, transactionReceipt.blockNumber + VERIFY_BLOCK_THRESHOLD / 2 + 1);
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
         assert(stamps[0][0] === PROVIDER_ID, "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
-        assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
-        assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
+        assert(stamps[0][2][0] == transactionReceipt.blockNumber, "Old block numbers not equal");
+        assert(stamps[0][2][1] == newResult.receipt.blockNumber, "New block numbers not equal");
 
         // Assert invalidity
-        stamps = await contractInstance.getStampsAt(
-          alice,
-          timestamp + days(VERIFY_DAY_THRESHOLD)
-        );
+        stamps = await contractInstance.getStampsAt(alice, transactionReceipt.blockNumber + VERIFY_BLOCK_THRESHOLD + 1);
         assert(
           stamps.length === 0,
           "Expected address to be invalid at this timestamp; length of stamps array is not equal to 0"
         );
 
         // Assert validity
-        stamps = await contractInstance.getStampsAt(alice, newTimestamp + 60);
+        stamps = await contractInstance.getStampsAt(alice, newResult.receipt.blockNumber + 1);
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
         assert(stamps[0][0] === PROVIDER_ID, "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
-        assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
-        assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
+        assert(stamps[0][2][0] == transactionReceipt.blockNumber, "Old block numbers not equal");
+        assert(stamps[0][2][1] == newResult.receipt.blockNumber, "New block numbers not equal");
 
         // Assert invalidity
-        stamps = await contractInstance.getStampsAt(
-          alice,
-          newTimestamp + days(VERIFY_DAY_THRESHOLD / 2)
-        );
+        stamps = await contractInstance.getStampsAt(alice, newResult.receipt.blockNumber + VERIFY_BLOCK_THRESHOLD / 2 + 1);
         assert(
           stamps.length === 0,
           "Expected address to be invalid at this timestamp; length of stamps array is not equal to 0"
@@ -449,21 +425,15 @@ contract("SignVerification", async (accounts) => {
       await snapshotHelper(async () => {
         // Set reverify day threshold to half of what it was before
         await contractInstance.setReverifyThreshold(
-          REVERIFY_DAY_THRESHOLD / 2,
+          REVERIFY_BLOCK_THRESHOLD / 2,
           {
             from: owner,
           }
         );
 
-        // Manually increase the time on the blockchain by REVERIFICATION_DAY_THRESHOLD / 2 days
-        await time.increase((REVERIFY_DAY_THRESHOLD / 2) * 24 * 60 * 60); // Time in seconds
-
-        // New timestamp REVERIFICATION_DAY_THRESHOLD * 2 days from now (which should match the current blockchain time)
-        const newTimestamp = Math.floor(
-          (new Date().getTime() +
-            (REVERIFY_DAY_THRESHOLD / 2) * 24 * 60 * 60 * 1000) /
-            1000
-        );
+        // Manually increase the time on the blockchain by REVERIFICATION_DAY_THRESHOLD / 2
+        await time.advanceBlockTo(transactionReceipt.blockNumber + REVERIFY_BLOCK_THRESHOLD / 2);
+        const newTimestamp = await time.latest();
 
         const { signature: newSignature } = await createSignature(
           newTimestamp,
@@ -474,7 +444,7 @@ contract("SignVerification", async (accounts) => {
         /*
          * Alice's second verification after verificationDayThreshold was halved, this should succeed
          */
-        await contractInstance.verifyAddress(
+        const newResult = await contractInstance.verifyAddress(
           alice,
           userHash,
           newTimestamp,
@@ -487,8 +457,8 @@ contract("SignVerification", async (accounts) => {
         assert(stamps.length === 1, "Length of stamps array is not equal to 1");
         assert(stamps[0][0] === PROVIDER_ID, "Provider id should be github");
         assert(stamps[0][1] === userHash, "Userhashes not equal");
-        assert(stamps[0][2][0] == timestamp, "Old timestamps not equal");
-        assert(stamps[0][2][1] == newTimestamp, "New timestamps not equal");
+        assert(stamps[0][2][0] == transactionReceipt.blockNumber, "Old block numbers not equal");
+        assert(stamps[0][2][1] == newResult.receipt.blockNumber, "New block numbers not equal");
       });
     });
   });
