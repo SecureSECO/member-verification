@@ -21,7 +21,7 @@ contract SignVerification is GenericSignatureHelper, Ownable {
     mapping(address => bool) internal isMember;
     address[] allMembers;
 
-    /// @notice The thresholdHistory array stores the history of the verifyDayThreshold variable. This is needed because we might want to check if some stamps were valid in the past.
+    /// @notice The thresholdHistory array stores the history of the verifyThreshold variable. This is needed because we might want to check if some stamps were valid in the past.
     Threshold[] thresholdHistory;
 
     /// @notice The reverifyThreshold determines how long a user has to wait before they can re-verify their address, in days
@@ -46,7 +46,7 @@ contract SignVerification is GenericSignatureHelper, Ownable {
         reverifyThreshold = _reverifyThreshold;
     }
 
-    /// @notice This function can only be called by the owner, and it verifies an address. It's not possible to re-verify an address before half the verifyDayThreshold has passed.
+    /// @notice This function can only be called by the owner, and it verifies an address. It's not possible to re-verify an address before half the verifyThreshold has passed.
     /// @dev Verifies an address
     /// @param _toVerify The address to verify
     /// @param _userHash The hash of the user's unique data on the provider (username, email, etc.)
@@ -125,7 +125,7 @@ contract SignVerification is GenericSignatureHelper, Ownable {
                 verifiedAt.push(block.number);
             } else {
                 revert(
-                    "Address already verified; cannot re-verify yet, wait at least half the verifyDayThreshold"
+                    "Address already verified; cannot re-verify yet, wait at least half the verifyThreshold"
                 );
             }
         }
@@ -219,14 +219,14 @@ contract SignVerification is GenericSignatureHelper, Ownable {
                 currentBlockNumberIndex--;
             }
 
-            uint verifyDayThreshold = thresholdHistory[currentBlockNumberIndex]
+            uint verifyThreshold = thresholdHistory[currentBlockNumberIndex]
                 .threshold;
 
             // Reverse for loop, because more recent dates are at the end of the array
             for (uint j = verifiedAt.length; j > 0; j--) {
                 // If the stamp is valid at _blockNumber, add it to the stampsAt array
                 if (
-                    verifiedAt[j - 1] + verifyDayThreshold >
+                    verifiedAt[j - 1] + verifyThreshold >
                     _blockNumber &&
                     verifiedAt[j - 1] < _blockNumber
                 ) {
@@ -234,7 +234,7 @@ contract SignVerification is GenericSignatureHelper, Ownable {
                     count++;
                     break;
                 } else if (
-                    verifiedAt[j - 1] + verifyDayThreshold <
+                    verifiedAt[j - 1] + verifyThreshold <
                     _blockNumber
                 ) {
                     break;
@@ -266,15 +266,15 @@ contract SignVerification is GenericSignatureHelper, Ownable {
         return isMember[_toCheck];
     }
 
-    /// @notice Returns latest verifyDayThreshold
-    function getVerifyDayThreshold() external view returns (uint) {
+    /// @notice Returns latest verifyThreshold
+    function getVerifyThreshold() external view returns (uint) {
         return thresholdHistory[thresholdHistory.length - 1].threshold;
     }
 
-    /// @notice This function can only be called by the owner to set the verifyDayThreshold
-    /// @dev Sets the verifyDayThreshold
-    /// @param _blocks The number of blocks to set the verifyDayThreshold to
-    function setVerifyDayThreshold(uint _blocks) external onlyOwner {
+    /// @notice This function can only be called by the owner to set the verifyThreshold
+    /// @dev Sets the verifyThreshold
+    /// @param _blocks The number of blocks to set the verifyThreshold to
+    function setVerifyThreshold(uint _blocks) external onlyOwner {
         Threshold memory lastThreshold = thresholdHistory[
             thresholdHistory.length - 1
         ];

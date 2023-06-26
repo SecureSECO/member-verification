@@ -227,7 +227,7 @@ contract("SignVerification", async (accounts) => {
     /**
      * Reverification should only be possible after some time has passed (30 days in our case).
      */
-    it("Can't verify if address has already been verified not too long ago (half verifyDayThreshold)", async () => {
+    it("Can't verify if address has already been verified not too long ago (half verifyThreshold)", async () => {
       try {
         // New timestamp and proof (within 30 days)
         const newTimestamp = Math.floor(new Date().getTime() / 1000);
@@ -238,7 +238,7 @@ contract("SignVerification", async (accounts) => {
         );
 
         // Alice's second verification (in close succession to her first), this should fail
-        // Because we don't allow reverifications within half the verifyDayThreshold (which is VERIFICATION_DAY_THRESHOLD days / 2)
+        // Because we don't allow reverifications within half the verifyThreshold (which is VERIFICATION_DAY_THRESHOLD days / 2)
         await contractInstance.verifyAddress(
           alice,
           userHash,
@@ -249,7 +249,7 @@ contract("SignVerification", async (accounts) => {
       } catch (error) {
         assert(
           error.message.includes(
-            "Address already verified; cannot re-verify yet, wait at least half the verifyDayThreshold"
+            "Address already verified; cannot re-verify yet, wait at least half the verifyThreshold"
           ),
           "Error message is not correct"
         );
@@ -261,7 +261,7 @@ contract("SignVerification", async (accounts) => {
     /**
      * Users should be able to reverify after 30 days have passed.
      */
-    it("Should be able to reverify after half the verifyDayThreshold has passed", async () => {
+    it("Should be able to reverify after half the verifyThreshold has passed", async () => {
       await snapshotHelper(async () => {
         // Manually increase the time on the blockchain by VERIFICATION_DAY_THRESHOLD / 2
         await time.advanceBlockTo(transactionReceipt.blockNumber + VERIFY_BLOCK_THRESHOLD / 2);
@@ -273,8 +273,8 @@ contract("SignVerification", async (accounts) => {
           ownerPrivKey
         );
 
-        // Alice's second verification (more than half the verifyDayThreshold after the first) -> this should succeed
-        // Because we allow reverifications after half the verifyDayThreshold (which is VERIFICATION_DAY_THRESHOLD / 2 days)
+        // Alice's second verification (more than half the verifyThreshold after the first) -> this should succeed
+        // Because we allow reverifications after half the verifyThreshold (which is VERIFICATION_DAY_THRESHOLD / 2 days)
         const newResult = await contractInstance.verifyAddress(
           alice,
           userHash,
@@ -306,8 +306,8 @@ contract("SignVerification", async (accounts) => {
           ownerPrivKey
         );
 
-        // Alice's second verification (more than half the verifyDayThreshold after the first) -> this should succeed
-        // Because we allow reverifications after half the verifyDayThreshold (which is VERIFICATION_DAY_THRESHOLD / 2 days)
+        // Alice's second verification (more than half the verifyThreshold after the first) -> this should succeed
+        // Because we allow reverifications after half the verifyThreshold (which is VERIFICATION_DAY_THRESHOLD / 2 days)
         const newResult = await contractInstance.verifyAddress(
           alice,
           userHash,
@@ -340,7 +340,7 @@ contract("SignVerification", async (accounts) => {
 
     /*
      * This test checks if the contract correctly returns the validity of a user at a given timestamp
-     * even after the verifyDayThreshold has been changed
+     * even after the verifyThreshold has been changed
      * The timeline for the test will be as follows:
      *
      * OOOOOO_____OOO_____
@@ -352,15 +352,15 @@ contract("SignVerification", async (accounts) => {
      * OOOOOO_____OOO_____
      *
      */
-    it("Should give correct validity at given timestamp even after verifyDayThreshold change", async () => {
+    it("Should give correct validity at given timestamp even after verifyThreshold change", async () => {
       await snapshotHelper(async () => {
         // Manually increase the time on the blockchain by VERIFICATION_DAY_THRESHOLD * 2
         await time.advanceBlockTo(transactionReceipt.blockNumber + VERIFY_BLOCK_THRESHOLD * 2);
 
         /*
-         * Change the verifyDayThreshold to be half of what it was before
+         * Change the verifyThreshold to be half of what it was before
          */
-        await contractInstance.setVerifyDayThreshold(
+        await contractInstance.setVerifyThreshold(
           Math.floor(VERIFY_BLOCK_THRESHOLD / 2),
           {
             from: owner,
