@@ -423,7 +423,7 @@ export const GithubVerificationAbi = [
         type: "uint64",
       },
     ],
-    name: "setVerifyDayThreshold",
+    name: "setVerifyThreshold",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
